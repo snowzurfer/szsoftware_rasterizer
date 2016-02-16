@@ -1,0 +1,3 @@
+[submodule "external/szthreadpool"]
+	path = external/szthreadpool
+	url = https://github.com/snowzurfer/szthreadpool.git
