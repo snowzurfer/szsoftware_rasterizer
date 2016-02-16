@@ -7,6 +7,7 @@
 //#include <Windows.h>
 #include "dbg.h"
 #include "thread_pool_c.h"
+#include "rasterizer.h"
 
 int main() {
   

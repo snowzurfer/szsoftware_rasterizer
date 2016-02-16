@@ -4,7 +4,6 @@
 
 #include <stdint.h>
 
-typedef struct Rasterizer Rasterizer;
 typedef struct RenderTarget RenderTarget;
 typedef struct VertexBuffer VertexBuffer;
 typedef struct CommandBuffer CommandBuffer;
@@ -21,25 +20,27 @@ typedef struct State State;
 
 
 /* Rasterizer *RasterizerCreateRasterizer(); */
-void RasterizerDestroy(Rasterizer *rast);
+/* void RasterizerDestroy(Rasterizer *rast); */
+
+CommandBuffer *CreateCommandBuffer(uint32_t size_bytes);
+
+void DestroyCommandBuffer(CommandBuffer *cmdbuffer);
 
 RenderTarget *CreateRenderTarget(
-  int32_t widht,
-  int32_t height,
-  int32_t pitch,
-  int32_t format);
+  uint32_t widht,
+  uint32_t height);
 
-void RasterizerSetRenderTarget(Rasterizer *rast,
+void RasterizerSetRenderTarget(CommandBuffer *cmdbuffer,
   RenderTarget *target);
 
-void RasterizerSetVertexBuffer(Rasterizer *rast, VertexBuffer *buffer);
+void RasterizerSetVertexBuffer(CommandBuffer *cmdbuffer, VertexBuffer *buffer);
 
-void RasterizerSetWindingOrder(Rasterizer *rast, WindingValues value);
+void RasterizerSetWindingOrder(CommandBuffer *cmdbuffer, WindingValues value);
 
-void RasterizerSetCullMode(Rasterizer *rast, CullModeValues value);
+void RasterizerSetCullMode(CommandBuffer *cmdbuffer, CullModeValues value);
 
-void RasterizerDrawAuto(int32_t count);
+void RasterizerDrawAuto(CommandBuffer *cmdbuffer, uint32_t count);
 
-void RasterizerSubmit(Rasterizer *rast, CommandBuffer *buffer);
+void RasterizerSubmit(CommandBuffer *cmdbuffer);
 
 #endif
