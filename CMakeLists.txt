@@ -16,11 +16,12 @@ set(SZSOFTRAST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(SZSOFTRAST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Add the threadpool library
+set(SZTHREADPOOL_BUILD_EXE FALSE)
 add_subdirectory(${SZSOFTRAST_EXTERNAL_DIR}/szthreadpool)
 
 # Set include dirs for the project
 include_directories(
-  #${SZSOFTRAST_INCLUDE_DIR}
+  ${SZSOFTRAST_INCLUDE_DIR}
   ${SZTHREADPOOL_INCLUDE_DIR}
   #${TBB_INCLUDE_DIRS}
   #$ENV{PTHREADS-WIN32}/Pre-built.2/include
@@ -41,7 +42,7 @@ add_executable(szsoftrast ${SZSOFTRAST_HEADERS} ${SZSOFTRAST_SOURCES})
 
 # Link target (the executable) with libraries
 target_link_libraries(szsoftrast
-  szthreadpool
+  libszthpool
 )
 
 # Set the output directories for the libraries and binaries
