@@ -5,11 +5,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/rpavlik-cm
 set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} $ENV{PTHREADS-WIN32}/Pre-built.2/lib/x86)
 project (szsoftware_rasterizer)
 
-#find_library(PTHREADS_LIB pthreadVC2)
-#if(PTHREADS_LIB)
-#  message(STATUS ${PTHREADS_LIB})
-#endif()
-
 # Setup handy variables:
 set(SZSOFTRAST_EXTERNAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external)
 set(SZSOFTRAST_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -23,18 +18,16 @@ add_subdirectory(${SZSOFTRAST_EXTERNAL_DIR}/szthreadpool)
 include_directories(
   ${SZSOFTRAST_INCLUDE_DIR}
   ${SZTHREADPOOL_INCLUDE_DIR}
-  #${TBB_INCLUDE_DIRS}
-  #$ENV{PTHREADS-WIN32}/Pre-built.2/include
 )
 
 # Set headers and sources for the szutl library
 set(SZSOFTRAST_HEADERS
-  #${SZSOFTRAST_INCLUDE_DIR}/thread_pool_c.h
   ${SZSOFTRAST_INCLUDE_DIR}/dbg.h
+  ${SZSOFTRAST_INCLUDE_DIR}/rasterizer.h
 )
 set(SZSOFTRAST_SOURCES
   ${SZSOFTRAST_SOURCE_DIR}/main.c
-  #${SZSOFTRAST_SOURCE_DIR}/thread_pool_c.c
+  ${SZSOFTRAST_SOURCE_DIR}/rasterizer.c
 )
 
 # Create the executable
