@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 
+typedef struct Device Device;
 typedef struct RenderTarget RenderTarget;
 typedef struct VertexBuffer VertexBuffer;
 typedef struct CommandBuffer CommandBuffer;
@@ -19,28 +20,27 @@ typedef enum CullModeValues {
 typedef struct State State;
 
 
-/* Rasterizer *RasterizerCreateRasterizer(); */
-/* void RasterizerDestroy(Rasterizer *rast); */
+Device *rtCreateDevice();
+void rtDestroyDevice(Device *device);
 
-CommandBuffer *CreateCommandBuffer(uint32_t size_bytes);
+CommandBuffer *rtCreateCmdBuffer(uint32_t size_bytes);
 
-void DestroyCommandBuffer(CommandBuffer *cmdbuffer);
+void rtDestroyCmdBuffer(CommandBuffer *cmdbuffer);
 
-RenderTarget *CreateRenderTarget(
-  uint32_t widht,
-  uint32_t height);
+RenderTarget *rtCreateRenderTarget(uint32_t widht, uint32_t height);
 
-void RasterizerSetRenderTarget(CommandBuffer *cmdbuffer,
-  RenderTarget *target);
+void rtDestroyRenderTarget(RenderTarget *target);
 
-void RasterizerSetVertexBuffer(CommandBuffer *cmdbuffer, VertexBuffer *buffer);
+int32_t rtSetRenderTarget(CommandBuffer *cmdbuffer, RenderTarget *target);
 
-void RasterizerSetWindingOrder(CommandBuffer *cmdbuffer, WindingValues value);
+int32_t rtSetVertexBuffer(CommandBuffer *cmdbuffer, VertexBuffer *buffer);
 
-void RasterizerSetCullMode(CommandBuffer *cmdbuffer, CullModeValues value);
+int32_t rtSetWindingOrder(CommandBuffer *cmdbuffer, WindingValues value);
 
-void RasterizerDrawAuto(CommandBuffer *cmdbuffer, uint32_t count);
+int32_t rtSetCullMode(CommandBuffer *cmdbuffer, CullModeValues value);
 
-void RasterizerSubmit(CommandBuffer *cmdbuffer);
+int32_t rtDrawAuto(CommandBuffer *cmdbuffer, uint32_t count);
+
+int32_t rtSubmit(Device *device, CommandBuffer *cmdbuffer);
 
 #endif
