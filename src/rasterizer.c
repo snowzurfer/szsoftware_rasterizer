@@ -92,7 +92,7 @@ typedef struct Device {
 
 /* Function prototypes */
 static int32_t cmdBufQueueInit(CmdBuffersQueue *cmdbuffer_queue);
-static CmdBuffersQueue *cmdBufQueuePop(CmdBuffersQueue *cmdbuffer_queue);
+static CmdBuffer *cmdBufQueuePop(CmdBuffersQueue *cmdbuffer_queue);
 static void cmdBufQueuePush(CmdBuffersQueue *cmdbuffer_queue,
                                CmdBuffer *cmdbuffer);
 static void cmdBufQueueClear(CmdBuffersQueue *cmdbuffer_queue);
@@ -184,6 +184,59 @@ void rtDestroyCmdBuffer(CmdBuffer *cmdbuffer) {
 
 error:
   ;
+}
+
+/* For this method, opted for a solution similar to what done on DX11:
+ provide the API with an array of vertices which is copied. After this
+ function call, there will exist 2 arrays of vertex data: the one provided
+ by the user, and the one on the API side.
+ The user should then delete his/her own buffer.
+ */
+VertexBuffer *rtCreateVertexBuffer(void *data, uint32_t size_data,
+    uint32_t size_element) {
+  VertexBuffer *buffer = NULL;
+
+  check_mem(data);
+
+  /* Allocate vbuffer structure and the data it points to one after the other */
+  uint32_t vbuf_totalsize = sizeof(VertexBuffer) + size_data;
+  buffer = (VertexBuffer *)malloc(vbuf_totalsize);
+  check_mem(buffer);
+
+  buffer->data = ((uint8_t *)buffer) + sizeof(VertexBuffer);
+  memcpy(buffer->data, data, size_data);
+
+  buffer->vert_num = size_data / size_element;
+
+#ifndef NDEBUG
+  for (uint32_t i = 0; i < size_data / sizeof(float); i += 3) {
+    printf("\tVert %d: %f,%f,%f\n", i / 3,
+      buffer->data[i],
+      buffer->data[i + 1],
+      buffer->data[i + 2]);
+  }
+#endif
+
+  debug("rtCreateVertexBuffer(): Created vertex buffer, addr: %#x", buffer);
+  return buffer;
+
+error:
+  return NULL;
+}
+
+void rtDestroyVertexBuffer(VertexBuffer *buffer) {
+  check(buffer != NULL, "rtDestroyVertexBuffer(): ptr passed is NULL");
+
+  /* Delete all of the data in one go since it was allocated
+   in one malloc() only */
+  free(buffer);
+  buffer = NULL;
+
+  debug("rtDestroyVertexBuffer(): Destroyed vertex buffer");
+
+error:
+  ;
+
 }
 
 RenderTarget *rtCreateRenderTarget(uint32_t width, uint32_t height) {
@@ -418,7 +471,7 @@ error:
   return -1;
 }
 
-CmdBuffersQueue *cmdBufQueuePop(CmdBuffersQueue *queue) {
+CmdBuffer *cmdBufQueuePop(CmdBuffersQueue *queue) {
   check(queue->lenght > 0, "cmdBufQueuePop(): the queue is empty!");
 
   CmdBuffer *popped_cmdbuffer = queue->front;

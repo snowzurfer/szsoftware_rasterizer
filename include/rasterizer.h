@@ -31,9 +31,10 @@ void rtDestroyCmdBuffer(CmdBuffer *cmdbuffer);
 /* Other options for the signature of this method:
  - VertexBuffer *rtCreate...(uint32_t size_elements, uint32_t size_bytes_vertex)
 */
-VertexBuffer *rtCreateVertexBuffer(uint8_t **data, uint32_t size_bytes_vertex);
+VertexBuffer *rtCreateVertexBuffer(void *data, uint32_t size_data,
+  uint32_t size_element);
 
-void rtDestroyVertexBuffer(VertexBuffer *cmdbuffer);
+void rtDestroyVertexBuffer(VertexBuffer *buffer);
 
 RenderTarget *rtCreateRenderTarget(uint32_t widht, uint32_t height);
 
