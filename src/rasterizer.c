@@ -21,18 +21,18 @@ typedef struct VertexBuffer {
 
 
 /*              Command buffer-related structures             */
-typedef struct CommandBuffer {
+typedef struct CmdBuffer {
   uint8_t *current;
   uint8_t *start;
   uint8_t *end;
-  struct CommandBuffer *prev_buffer; /* Used by the queue */
-} CommandBuffer;
+  struct CmdBuffer *prev_buffer; /* Used by the queue */
+} CmdBuffer;
 
-typedef struct CommandBuffersQueue {
-  CommandBuffer *front;
-  CommandBuffer *rear;
+typedef struct CmdBuffersQueue {
+  CmdBuffer *front;
+  CmdBuffer *rear;
   uint32_t lenght;
-} CommandBuffersQueue;
+} CmdBuffersQueue;
 
 
 typedef struct PacketHeader {
@@ -48,30 +48,34 @@ typedef struct PacketHeader {
 
 /* Packets type consts are very rough. A better method to store this information
  will be developed. */
-typedef struct CmdPacketSetVertexBuffer {
+typedef struct PacketSetVertexBuffer {
   PacketHeader packet_header;
   VertexBuffer *buffer;
-} CmdPacketSetVertexBuffer;
-static const uint8_t PacketSetVertexBufferType = 1;
-typedef struct CmdPacketSetRenderTarget {
+} PacketSetVertexBuffer;
+#define PACK_TYPE_SETVERTExBUFFER 0
+typedef struct PacketSetRenderTarget {
   PacketHeader packet_header;
   RenderTarget *target;
-} CmdPacketSetRenderTarget;
+} PacketSetRenderTarget;
+#define PACK_TYPE_SETRENDERTARGET 1U
 static const uint8_t PacketSetRenderTargetType = 0;
-typedef struct CmdPacketSetCullMode {
+typedef struct PacketSetCullMode {
   PacketHeader packet_header;
   CullModeValues value;
-} CmdPacketSetCullMode;
+} PacketSetCullMode;
+#define PACK_TYPE_SETCULLMODE 2U
 static const uint8_t PacketSetCullModeType = 2;
-typedef struct CmdPacketSetWindingOrder{
+typedef struct PacketSetWindingOrder{
   PacketHeader packet_header;
   WindingValues value;
-} CmdPacketSetWindingOrder;
+} PacketSetWindingOrder;
+#define PACK_TYPE_SETWINDINGORDER 3U
 static const uint8_t PacketSetWindingOrderType = 3;
-typedef struct CmdPacketDrawAuto{
+typedef struct PacketDrawAuto{
   PacketHeader packet_header;
   uint32_t count;
-} CmdPacketDrawAuto;
+} PacketDrawAuto;
+#define PACK_TYPE_DRAWAUTOTYPE 4U
 static const uint8_t PacketDrawAutoType = 4;
 
 
@@ -81,17 +85,17 @@ typedef struct DeviceState {
 
 typedef struct Device {
   DeviceState state;
-  CommandBuffersQueue cmdbuffer_queue;
+  CmdBuffersQueue cmdbuffer_queue;
 } Device;
 
 
 
 /* Function prototypes */
-static int32_t cmdBufQueueInit(CommandBuffersQueue *cmdbuffer_queue);
-static CommandBuffersQueue *cmdBufQueuePop(CommandBuffersQueue *cmdbuffer_queue);
-static int32_t cmdBufQueuePush(CommandBuffersQueue *cmdbuffer_queue,
-                               CommandBuffer *cmdbuffer);
-static int32_t cmdBufQueueClear(CommandBuffersQueue *cmdbuffer_queue);
+static int32_t cmdBufQueueInit(CmdBuffersQueue *cmdbuffer_queue);
+static CmdBuffersQueue *cmdBufQueuePop(CmdBuffersQueue *cmdbuffer_queue);
+static void cmdBufQueuePush(CmdBuffersQueue *cmdbuffer_queue,
+                               CmdBuffer *cmdbuffer);
+static void cmdBufQueueClear(CmdBuffersQueue *cmdbuffer_queue);
 
 
 Device *rtCreateDevice() {
@@ -104,7 +108,7 @@ Device *rtCreateDevice() {
   int32_t rc = cmdBufQueueInit(&(device->cmdbuffer_queue));
   check(rc != -1, "rtCreateDevice(): Couldn't initialise the cmdbuf queue");
 
-  debug("Created device, addr: %d", device);
+  debug("rtCreateDevice(): Created device, addr: %#x", device);
   return device;
 
 error:
@@ -120,13 +124,12 @@ void rtDestroyDevice(Device *device) {
   check(device != NULL, "rtDestroyDevice(): device ptr passed is NULL");
 
   /* Clear also the queue of cmdbuffers */
-  int32_t rc = cmdBufQueueClear(&(device->cmdbuffer_queue));
-  check(rc != -1, "rtDestroyDevice(): couldn't clear cmdbuffer queue");
+  cmdBufQueueClear(&(device->cmdbuffer_queue));
 
   free(device);
   device = NULL;
 
-  debug("Destroyed device");
+  debug("rtDestroyDevice(): Destroyed device");
 
 error:
   if (device != NULL) {
@@ -135,13 +138,13 @@ error:
   }
 }
 
-CommandBuffer *rtCreateCmdBuffer(uint32_t size_bytes) {
-  CommandBuffer *cmdbuffer = NULL;
+CmdBuffer *rtCreateCmdBuffer(uint32_t size_bytes) {
+  CmdBuffer *cmdbuffer = NULL;
   uint8_t *data = NULL;
   data = (uint8_t *)malloc(size_bytes);
   check_mem(data);
 
-  cmdbuffer = (CommandBuffer *)malloc(sizeof(CommandBuffer));
+  cmdbuffer = (CmdBuffer *)malloc(sizeof(CmdBuffer));
   check_mem(cmdbuffer);
 
   cmdbuffer->start = data;
@@ -149,7 +152,7 @@ CommandBuffer *rtCreateCmdBuffer(uint32_t size_bytes) {
   cmdbuffer->end = data + size_bytes;
   cmdbuffer->prev_buffer = NULL;
 
-  debug("Created cmdbuffer, addr: %d", cmdbuffer);
+  debug("rtCreateCmdBuffer(): Created cmdbuffer, addr: %#x", cmdbuffer);
   return cmdbuffer;
 
 error:
@@ -166,7 +169,7 @@ error:
   return NULL;
 }
 
-void rtDestroyCmdBuffer(CommandBuffer *cmdbuffer) {
+void rtDestroyCmdBuffer(CmdBuffer *cmdbuffer) {
   check(cmdbuffer != NULL, "rtDestroyCmdBuffer(): ptr passed is NULL");
 
   free(cmdbuffer->start);
@@ -177,7 +180,7 @@ void rtDestroyCmdBuffer(CommandBuffer *cmdbuffer) {
   free(cmdbuffer);
   cmdbuffer = NULL;
 
-  debug("Destroyed cmdbuffer");
+  debug("rtDestroyCmdBuffer(): Destroyed cmdbuffer");
 
 error:
   ;
@@ -200,7 +203,7 @@ RenderTarget *rtCreateRenderTarget(uint32_t width, uint32_t height) {
   target->width = width;
   target->pitch = sizeof(uint32_t) * width;
 
-  debug("Created target, addr: %d", target);
+  debug("rtCreateRenderTarget(): Created target, addr: %#x", target);
   return target;
 
 error:
@@ -220,145 +223,261 @@ void rtDestroyRenderTarget(RenderTarget *target) {
   free(target);
   target = NULL;
 
-  debug("Destroyed target");
+  debug("rtDestroyRenderTarget(): Destroyed target");
 
 error:
   ;
 }
 
-int32_t rtSetRenderTarget(CommandBuffer *cmdbuffer, RenderTarget *target) {
+int32_t rtSetRenderTarget(CmdBuffer *cmdbuffer, RenderTarget *target) {
   /* Check that the cmd buffer has enough space for the new packet */
   int32_t space_left = cmdbuffer->end - cmdbuffer->current;
-  check((sizeof(CmdPacketSetRenderTarget) <= space_left), "rtSetRenderTarget():\
+  check((sizeof(PacketSetRenderTarget) <= space_left), "rtSetRenderTarget():\
  the cmdbuffer doesn't have enough space left for the new command");
 
   check(target != NULL, "rtSetRenderTarget(): target passed is NULL");
 
-  CmdPacketSetRenderTarget *packet =
-    (CmdPacketSetRenderTarget *)cmdbuffer->current;
-  packet->packet_header.header = PacketSetRenderTargetType;
+  PacketSetRenderTarget *packet =
+    (PacketSetRenderTarget *)cmdbuffer->current;
+  packet->packet_header.header = PACK_TYPE_SETRENDERTARGET;
   packet->target = target;
 
-  cmdbuffer->current += sizeof(CmdPacketSetRenderTarget);
+  cmdbuffer->current += sizeof(PacketSetRenderTarget);
 
-  debug("Set render target %d in cmdbuffer %d", target, cmdbuffer);
+  debug("rtSetRenderTarget(): Set render target %#x in cmdbuffer %#x", target, cmdbuffer);
   return 0;
 
 error:
   return -1;
 }
 
-int32_t rtSetVertexBuffer(CommandBuffer *cmdbuffer, VertexBuffer *buffer) {
+int32_t rtSetVertexBuffer(CmdBuffer *cmdbuffer, VertexBuffer *buffer) {
   /* Check that the cmd buffer has enough space for the new packet */
   int32_t space_left = cmdbuffer->end - cmdbuffer->current;
-  check((sizeof(CmdPacketSetVertexBuffer) <= space_left), "rtSetVertexBuffer():\
+  check((sizeof(PacketSetVertexBuffer) <= space_left), "rtSetVertexBuffer():\
  the cmdbuffer doesn't have enough space left for the new command");
 
   check(buffer != NULL, "rtSetVertexBuffer(): buffer passed is NULL");
 
-  CmdPacketSetVertexBuffer *packet =
-    (CmdPacketSetVertexBuffer *)cmdbuffer->current;
-  packet->packet_header.header = PacketSetVertexBufferType;
+  PacketSetVertexBuffer *packet =
+    (PacketSetVertexBuffer *)cmdbuffer->current;
+  packet->packet_header.header = PACK_TYPE_SETVERTExBUFFER;
   packet->buffer = buffer;
 
-  cmdbuffer->current += sizeof(CmdPacketSetVertexBuffer);
+  cmdbuffer->current += sizeof(PacketSetVertexBuffer);
 
-  debug("Set vertex buffer %d in cmdbuffer %d", buffer, cmdbuffer);
+  debug("rtSetVertexBuffer(): Set vertex buffer %#x in cmdbuffer %#x", buffer, cmdbuffer);
   return 0;
 
 error:
   return -1;
 }
 
-int32_t rtSetWindingOrder(CommandBuffer *cmdbuffer, WindingValues value) {
+int32_t rtSetWindingOrder(CmdBuffer *cmdbuffer, WindingValues value) {
   /* Check that the cmd buffer has enough space for the new packet */
   int32_t space_left = cmdbuffer->end - cmdbuffer->current;
-  check((sizeof(CmdPacketSetWindingOrder) <= space_left), "rtSetWindingOrder():\
+  check((sizeof(PacketSetWindingOrder) <= space_left), "rtSetWindingOrder():\
  the cmdbuffer doesn't have enough space left for the new command");
 
   /* Should check for validity of the winding value passed */
 
-  CmdPacketSetWindingOrder *packet =
-    (CmdPacketSetWindingOrder *)cmdbuffer->current;
-  packet->packet_header.header = PacketSetWindingOrderType;
+  PacketSetWindingOrder *packet =
+    (PacketSetWindingOrder *)cmdbuffer->current;
+  packet->packet_header.header = PACK_TYPE_SETWINDINGORDER;
   packet->value = value;
 
-  cmdbuffer->current += sizeof(CmdPacketSetWindingOrder);
+  cmdbuffer->current += sizeof(PacketSetWindingOrder);
 
-  debug("Set winding order %d in cmdbuffer %d", value, cmdbuffer);
+  debug("rtSetWindingOrder(): Set winding order %#x in cmdbuffer %#x", value, cmdbuffer);
   return 0;
 
 error:
   return -1;
 }
 
-int32_t rtSetCullMode(CommandBuffer *cmdbuffer, CullModeValues value) {
+int32_t rtSetCullMode(CmdBuffer *cmdbuffer, CullModeValues value) {
   /* Check that the cmd buffer has enough space for the new packet */
   int32_t space_left = cmdbuffer->end - cmdbuffer->current;
-  check((sizeof(CmdPacketSetCullMode) <= space_left), "rtSetCullMode():\
+  check((sizeof(PacketSetCullMode) <= space_left), "rtSetCullMode():\
  the cmdbuffer doesn't have enough space left for the new command");
 
   /* Should check for validity of the cull mode value passed */
 
-  CmdPacketSetCullMode *packet =
-    (CmdPacketSetCullMode *)cmdbuffer->current;
-  packet->packet_header.header = PacketSetCullModeType;
+  PacketSetCullMode *packet =
+    (PacketSetCullMode *)cmdbuffer->current;
+  packet->packet_header.header = PACK_TYPE_SETCULLMODE;
   packet->value = value;
 
-  cmdbuffer->current += sizeof(CmdPacketSetCullMode);
+  cmdbuffer->current += sizeof(PacketSetCullMode);
 
-  debug("Set cull mode %d in cmdbuffer %d", value, cmdbuffer);
+  debug("rtSetCullMode(): Set cull mode %#x in cmdbuffer %#x", value, cmdbuffer);
   return 0;
 
 error:
   return -1;
 }
 
-int32_t rtDrawAuto(CommandBuffer *cmdbuffer, uint32_t count) {
+int32_t rtDrawAuto(CmdBuffer *cmdbuffer, uint32_t count) {
   /* Check that the cmd buffer has enough space for the new packet */
   int32_t space_left = cmdbuffer->end - cmdbuffer->current;
-  check((sizeof(CmdPacketDrawAuto) <= space_left), "rtDrawAuto():\
+  check((sizeof(PacketDrawAuto) <= space_left), "rtDrawAuto():\
  the cmdbuffer doesn't have enough space left for the new command");
 
-  CmdPacketDrawAuto *packet =
-    (CmdPacketDrawAuto *)cmdbuffer->current;
-  packet->packet_header.header = PacketDrawAutoType;
+  PacketDrawAuto *packet =
+    (PacketDrawAuto *)cmdbuffer->current;
+  packet->packet_header.header = PACK_TYPE_DRAWAUTOTYPE;
   packet->count = count;
 
-  cmdbuffer->current += sizeof(CmdPacketDrawAuto);
+  cmdbuffer->current += sizeof(PacketDrawAuto);
 
-  debug("Set draw auto of %d in cmdbuffer %d", count, cmdbuffer);
+  debug("rtDrawAuto(): Set draw auto of %#x in cmdbuffer %#x", count, cmdbuffer);
   return 0;
 
 error:
   return -1;
 }
 
-int32_t rtSubmit(Device *device, CommandBuffer *buffer) {
+void rtSubmit(Device *device, CmdBuffer *buffer) {
+  cmdBufQueuePush(&(device->cmdbuffer_queue), buffer);
+
+  debug("Submitted cmdbuffer %#x to device %#x", buffer, device);
+}
+
+void rtParseCmdBuffers(Device *device) {
   /* Print out the contents for now*/
-  debug("rtSubmit(): function will print out contents of buffer as a start.\n\
-Next iteration will do the actual work.");
+  while (device->cmdbuffer_queue.lenght) {
+    debug("Parsed cmdbuffer");
+    CmdBuffer *buffer = cmdBufQueuePop(&(device->cmdbuffer_queue));
+    /* A NULL buffer might have been added for various reasons; if so,
+     just skip ahead */
+    if (buffer == NULL) {
+      continue;
+    }
 
-  return 0;
+    /* Print out contents of the cmdbuffer */
+
+    /* Cast head ptr to header */
+    uint8_t *read_ptr = buffer->start;
+    while (read_ptr < buffer->current) {
+      PacketHeader *packet_header = (PacketHeader *)read_ptr;
+      uint32_t packet_size = 0U;
+      /* Determine the type of packet */
+      switch (packet_header->header) {
+        case PACK_TYPE_SETRENDERTARGET: {
+          PacketSetRenderTarget *packet = (PacketSetRenderTarget *)read_ptr;
+          debug("Parsed render target packet, addr: %#x", packet);
+          packet_size = sizeof(PacketSetRenderTarget);
+          break;
+        }
+        case PACK_TYPE_SETVERTExBUFFER: {
+          PacketSetVertexBuffer *packet = (PacketSetVertexBuffer *)read_ptr;
+          debug("Parsed vertex buffer packet, addr: %#x", packet);
+          packet_size = sizeof(PacketSetVertexBuffer);
+          break;
+        }
+        case PACK_TYPE_SETCULLMODE: {
+          PacketSetCullMode *packet = (PacketSetCullMode *)read_ptr;
+          debug("Parsed cull mode packet, value: %#x", packet->value);
+          packet_size = sizeof(PacketSetCullMode);
+          break;
+        }
+        case PACK_TYPE_SETWINDINGORDER: {
+          PacketSetWindingOrder *packet = (PacketSetWindingOrder *)read_ptr;
+          debug("Parsed winding order packet, value: %#x", packet->value);
+          packet_size = sizeof(PacketSetWindingOrder);
+          break;
+        }
+        case PACK_TYPE_DRAWAUTOTYPE: {
+          PacketDrawAuto *packet = (PacketDrawAuto *)read_ptr;
+          debug("Parsed draw auto packet, count: %#x", packet->count);
+          packet_size = sizeof(PacketDrawAuto);
+          break;
+        }
+      }
+
+      read_ptr += packet_size;
+    }
+
+    buffer->current = buffer->start;
+
+  }
 }
 
-int32_t cmdBufQueueInit(CommandBuffersQueue *cmdbuffer_queue) {
+int32_t cmdBufQueueInit(CmdBuffersQueue *cmdbuffer_queue) {
+  check_mem(cmdbuffer_queue);
 
+  cmdbuffer_queue->lenght = 0;
+  cmdbuffer_queue->front = NULL;
+  cmdbuffer_queue->rear = NULL;
+
+  debug("cmdBufQueueInit(): Initialised queue addr: %#x", cmdbuffer_queue);
   return 0;
+
+error:
+
+  return -1;
 }
 
-CommandBuffersQueue *cmdBufQueuePop(CommandBuffersQueue *cmdbuffer_queue) {
+CmdBuffersQueue *cmdBufQueuePop(CmdBuffersQueue *queue) {
+  check(queue->lenght > 0, "cmdBufQueuePop(): the queue is empty!");
+
+  CmdBuffer *popped_cmdbuffer = queue->front;
+
+  switch (queue->lenght) {
+    case 0: {
+      break;
+    }
+    case 1: {
+      queue->front = NULL;
+      queue->rear = NULL;
+      queue->lenght = 0;
+      break;
+    }
+    default: {
+      queue->front = popped_cmdbuffer->prev_buffer;
+      queue->lenght --;
+    }
+  }
+
+  debug("cmdBufQueuePop(): Popped an item, addr: %#x", popped_cmdbuffer);
+  return popped_cmdbuffer;
+
+error:
 
   return NULL;
 }
 
-int32_t cmdBufQueuePush(CommandBuffersQueue *cmdbuffer_queue,
-  CommandBuffer *cmdbuffer) {
+void cmdBufQueuePush(CmdBuffersQueue *queue, CmdBuffer *cmdbuffer) {
+  cmdbuffer->prev_buffer = NULL;
 
-  return 0;
+  switch (queue->lenght) {
+    case 0: {
+      queue->front = cmdbuffer;
+      queue->rear = cmdbuffer;
+      break;
+    }
+    default: {
+      queue->rear->prev_buffer = cmdbuffer;
+      queue->rear = cmdbuffer;
+    }
+  }
+
+  queue->lenght ++;
+
+  debug("cmdBufQueuePush(): Pushed an item, addr: %#x", cmdbuffer);
 }
 
-int32_t cmdBufQueueClear(CommandBuffersQueue *cmdbuffer_queue) {
+void cmdBufQueueClear(CmdBuffersQueue *queue) {
+  while (queue->lenght) {
+    CmdBuffer *buffer_to_free = cmdBufQueuePop(queue);
+    if (buffer_to_free != NULL) {
+      rtDestroyCmdBuffer(buffer_to_free);
+    }
+  }
 
-  return 0;
+  queue->front = NULL;
+  queue->rear = NULL;
+  queue->lenght = 0;
+
+  debug("cmdBufQueueClear(): cleared a queue");
 }

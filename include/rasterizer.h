@@ -7,7 +7,7 @@
 typedef struct Device Device;
 typedef struct RenderTarget RenderTarget;
 typedef struct VertexBuffer VertexBuffer;
-typedef struct CommandBuffer CommandBuffer;
+typedef struct CmdBuffer CmdBuffer;
 typedef enum WindingValues {
   RAST_WINDING_ORDER_CW,
   RAST_WINDING_ORDER_CCW,
@@ -21,26 +21,36 @@ typedef struct State State;
 
 
 Device *rtCreateDevice();
+
 void rtDestroyDevice(Device *device);
 
-CommandBuffer *rtCreateCmdBuffer(uint32_t size_bytes);
+CmdBuffer *rtCreateCmdBuffer(uint32_t size_bytes);
 
-void rtDestroyCmdBuffer(CommandBuffer *cmdbuffer);
+void rtDestroyCmdBuffer(CmdBuffer *cmdbuffer);
+
+/* Other options for the signature of this method:
+ - VertexBuffer *rtCreate...(uint32_t size_elements, uint32_t size_bytes_vertex)
+*/
+VertexBuffer *rtCreateVertexBuffer(uint8_t **data, uint32_t size_bytes_vertex);
+
+void rtDestroyVertexBuffer(VertexBuffer *cmdbuffer);
 
 RenderTarget *rtCreateRenderTarget(uint32_t widht, uint32_t height);
 
 void rtDestroyRenderTarget(RenderTarget *target);
 
-int32_t rtSetRenderTarget(CommandBuffer *cmdbuffer, RenderTarget *target);
+int32_t rtSetRenderTarget(CmdBuffer *cmdbuffer, RenderTarget *target);
 
-int32_t rtSetVertexBuffer(CommandBuffer *cmdbuffer, VertexBuffer *buffer);
+int32_t rtSetVertexBuffer(CmdBuffer *cmdbuffer, VertexBuffer *buffer);
 
-int32_t rtSetWindingOrder(CommandBuffer *cmdbuffer, WindingValues value);
+int32_t rtSetWindingOrder(CmdBuffer *cmdbuffer, WindingValues value);
 
-int32_t rtSetCullMode(CommandBuffer *cmdbuffer, CullModeValues value);
+int32_t rtSetCullMode(CmdBuffer *cmdbuffer, CullModeValues value);
 
-int32_t rtDrawAuto(CommandBuffer *cmdbuffer, uint32_t count);
+int32_t rtDrawAuto(CmdBuffer *cmdbuffer, uint32_t count);
 
-int32_t rtSubmit(Device *device, CommandBuffer *cmdbuffer);
+void rtSubmit(Device *device, CmdBuffer *cmdbuffer);
+
+void rtParseCmdBuffers(Device *device);
 
 #endif
