@@ -2,7 +2,7 @@
 # Cmake entry point
 cmake_minimum_required (VERSION 2.8.9)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/rpavlik-cmake-modules-1c73e35/")
-set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} $ENV{PTHREADS-WIN32}/Pre-built.2/lib/x86)
+
 project (szrasterizer)
 
 # Setup handy variables:
