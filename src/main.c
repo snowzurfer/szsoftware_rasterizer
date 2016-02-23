@@ -5,7 +5,8 @@
 #include <stdlib.h>
 
 int main() {
-  Device *device = rtCreateDevice();
+  Device device;
+  rtInitDevice(&device);
   CmdBuffer *cmdbuf = rtCreateCmdBuffer(4096U);
 
   uint32_t num_vertices = 3;
@@ -19,9 +20,23 @@ int main() {
     vertex_size * num_vertices, vertex_size);
   free(vertices);
 
+  RenderTarget *target = rtCreateRenderTarget(800U, 600U);
+
+
+  rtSetRenderTarget(cmdbuf, target);
+  rtSetVertexBuffer(cmdbuf, vtxbuff);
+  rtSetWindingOrder(cmdbuf, RAST_WINDING_ORDER_CCW);
+  rtSetCullMode(cmdbuf, RAST_CULL_MODE_BACK);
+  rtDrawAuto(cmdbuf, num_vertices);
+
+  rtSubmit(&device, cmdbuf);
+
+  rtParseCmdBuffers(&device);
+  
+  rtDestroyRenderTarget(target);
   rtDestroyVertexBuffer(vtxbuff);
   rtDestroyCmdBuffer(cmdbuf);
-  rtDestroyDevice(device);
+  rtClearDevice(&device);
 
   getc(stdin);
   return 0;

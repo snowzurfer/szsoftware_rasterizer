@@ -1,9 +1,12 @@
 
 #include <stdlib.h>
+#include <assert.h>
 #include "rasterizer.h"
 #include "dbg.h"
 
 #define STATE_COUNT 2
+#define STATE_WINDING 0
+#define STATE_CULL_MODE 1
 
 typedef struct RenderTarget {
   uint8_t *location;
@@ -83,11 +86,12 @@ typedef struct DeviceState {
   uint32_t values[STATE_COUNT];
 } DeviceState;
 
-typedef struct Device {
+typedef struct DeviceInt {
   DeviceState state;
   CmdBuffersQueue cmdbuffer_queue;
-} Device;
-
+} DeviceInt;
+static_assert(sizeof(Device) >= sizeof(DeviceInt),
+  "Size of Device must be >= size of DeviceInt");
 
 
 /* Function prototypes */
@@ -98,44 +102,41 @@ static void cmdBufQueuePush(CmdBuffersQueue *cmdbuffer_queue,
 static void cmdBufQueueClear(CmdBuffersQueue *cmdbuffer_queue);
 
 
-Device *rtCreateDevice() {
-  Device *device = NULL;
+int32_t rtInitDevice(Device *device) {
+  check(device != NULL, "rtInitDevice(): device ptr passed is NULL");
 
-  device = (Device *)malloc(sizeof(Device));
-  check_mem(device);
+  DeviceInt  *internal_device = (DeviceInt *)device;
+  internal_device->state.values[STATE_WINDING] = RAST_WINDING_ORDER_CCW;
+  internal_device->state.values[STATE_CULL_MODE] = RAST_CULL_MODE_BACK;
 
   // Initialise the queue
-  int32_t rc = cmdBufQueueInit(&(device->cmdbuffer_queue));
-  check(rc != -1, "rtCreateDevice(): Couldn't initialise the cmdbuf queue");
+  int32_t rc = cmdBufQueueInit(&(internal_device->cmdbuffer_queue));
+  check(rc != -1, "rtInitDevice(): Couldn't initialise the cmdbuf queue");
 
-  debug("rtCreateDevice(): Created device, addr: %#x", device);
-  return device;
+  debug("rtInitDevice(): Initialised device, addr: %p", (void *)device);
+
+  return 0;
 
 error:
-  if (device != NULL) {
-    free(device);
-    device = NULL;
-  }
 
-  return NULL;
+  return -1;
 }
 
-void rtDestroyDevice(Device *device) {
-  check(device != NULL, "rtDestroyDevice(): device ptr passed is NULL");
+int32_t rtClearDevice(Device *device) {
+  check(device != NULL, "rtClearDevice(): device ptr passed is NULL");
 
+  DeviceInt  *internal_device = (DeviceInt *)device;
+  
   /* Clear also the queue of cmdbuffers */
-  cmdBufQueueClear(&(device->cmdbuffer_queue));
+  cmdBufQueueClear(&(internal_device->cmdbuffer_queue));
 
-  free(device);
-  device = NULL;
+  debug("rtClearDevice(): Destroyed device");
 
-  debug("rtDestroyDevice(): Destroyed device");
+  return 0;
 
 error:
-  if (device != NULL) {
-    free(device);
-    device = NULL;
-  }
+
+  return -1;
 }
 
 CmdBuffer *rtCreateCmdBuffer(uint32_t size_bytes) {
@@ -152,7 +153,7 @@ CmdBuffer *rtCreateCmdBuffer(uint32_t size_bytes) {
   cmdbuffer->end = data + size_bytes;
   cmdbuffer->prev_buffer = NULL;
 
-  debug("rtCreateCmdBuffer(): Created cmdbuffer, addr: %#x", cmdbuffer);
+  debug("rtCreateCmdBuffer(): Created cmdbuffer, addr: %p", (void *)cmdbuffer);
   return cmdbuffer;
 
 error:
@@ -203,7 +204,7 @@ VertexBuffer *rtCreateVertexBuffer(void *data, uint32_t size_data,
   buffer = (VertexBuffer *)malloc(vbuf_totalsize);
   check_mem(buffer);
 
-  buffer->data = ((uint8_t *)buffer) + sizeof(VertexBuffer);
+  buffer->data = (float *)(((uint8_t *)buffer) + sizeof(VertexBuffer));
   memcpy(buffer->data, data, size_data);
 
   buffer->vert_num = size_data / size_element;
@@ -217,7 +218,7 @@ VertexBuffer *rtCreateVertexBuffer(void *data, uint32_t size_data,
   }
 #endif
 
-  debug("rtCreateVertexBuffer(): Created vertex buffer, addr: %#x", buffer);
+  debug("rtCreateVertexBuffer(): Created vertex buffer, addr: %p", (void *)buffer);
   return buffer;
 
 error:
@@ -248,15 +249,15 @@ RenderTarget *rtCreateRenderTarget(uint32_t width, uint32_t height) {
   target = (RenderTarget *)malloc(sizeof(RenderTarget));
   check_mem(target);
 
-  target->size_bytes = sizeof(uint32_t) * width * height;
+  target->size_bytes = sizeof(void *) * width * height;
   target->location = (uint8_t *)malloc(target->size_bytes);
   check_mem(target->location);
 
   target->height = height;
   target->width = width;
-  target->pitch = sizeof(uint32_t) * width;
+  target->pitch = sizeof(void *) * width;
 
-  debug("rtCreateRenderTarget(): Created target, addr: %#x", target);
+  debug("rtCreateRenderTarget(): Created target, addr: %p", (void *)target);
   return target;
 
 error:
@@ -297,7 +298,8 @@ int32_t rtSetRenderTarget(CmdBuffer *cmdbuffer, RenderTarget *target) {
 
   cmdbuffer->current += sizeof(PacketSetRenderTarget);
 
-  debug("rtSetRenderTarget(): Set render target %#x in cmdbuffer %#x", target, cmdbuffer);
+  debug("rtSetRenderTarget(): Set render target %p in cmdbuffer %p",
+    (void *)target, (void *)cmdbuffer);
   return 0;
 
 error:
@@ -319,7 +321,8 @@ int32_t rtSetVertexBuffer(CmdBuffer *cmdbuffer, VertexBuffer *buffer) {
 
   cmdbuffer->current += sizeof(PacketSetVertexBuffer);
 
-  debug("rtSetVertexBuffer(): Set vertex buffer %#x in cmdbuffer %#x", buffer, cmdbuffer);
+  debug("rtSetVertexBuffer(): Set vertex buffer %p in cmdbuffer %p",
+    (void *)buffer, (void *)cmdbuffer);
   return 0;
 
 error:
@@ -341,7 +344,8 @@ int32_t rtSetWindingOrder(CmdBuffer *cmdbuffer, WindingValues value) {
 
   cmdbuffer->current += sizeof(PacketSetWindingOrder);
 
-  debug("rtSetWindingOrder(): Set winding order %#x in cmdbuffer %#x", value, cmdbuffer);
+  debug("rtSetWindingOrder(): Set winding order %p in cmdbuffer %p",
+    (void *)value, (void *)cmdbuffer);
   return 0;
 
 error:
@@ -363,7 +367,8 @@ int32_t rtSetCullMode(CmdBuffer *cmdbuffer, CullModeValues value) {
 
   cmdbuffer->current += sizeof(PacketSetCullMode);
 
-  debug("rtSetCullMode(): Set cull mode %#x in cmdbuffer %#x", value, cmdbuffer);
+  debug("rtSetCullMode(): Set cull mode %p in cmdbuffer %p",
+    (void *)value, (void *)cmdbuffer);
   return 0;
 
 error:
@@ -383,24 +388,40 @@ int32_t rtDrawAuto(CmdBuffer *cmdbuffer, uint32_t count) {
 
   cmdbuffer->current += sizeof(PacketDrawAuto);
 
-  debug("rtDrawAuto(): Set draw auto of %#x in cmdbuffer %#x", count, cmdbuffer);
+  debug("rtDrawAuto(): Set draw auto of %d in cmdbuffer %p",
+    (uint32_t)count, (void *)cmdbuffer);
   return 0;
 
 error:
   return -1;
 }
 
-void rtSubmit(Device *device, CmdBuffer *buffer) {
-  cmdBufQueuePush(&(device->cmdbuffer_queue), buffer);
+int32_t rtSubmit(Device *device, CmdBuffer *buffer) {
+  check(device != NULL, "rtInitDevice(): device ptr passed is NULL");
+  
+  DeviceInt  *internal_device = (DeviceInt *)device;
+  
+  cmdBufQueuePush(&(internal_device->cmdbuffer_queue), buffer);
 
-  debug("Submitted cmdbuffer %#x to device %#x", buffer, device);
+  debug("Submitted cmdbuffer %p to device %p",
+    (void *)buffer, (void *)device);
+
+  return 0;
+
+error:
+
+  return -1;
 }
 
-void rtParseCmdBuffers(Device *device) {
+int32_t rtParseCmdBuffers(Device *device) {
+  check(device != NULL, "rtInitDevice(): device ptr passed is NULL");
+  
+  DeviceInt  *internal_device = (DeviceInt *)device;
+  
   /* Print out the contents for now*/
-  while (device->cmdbuffer_queue.lenght) {
+  while (internal_device->cmdbuffer_queue.lenght) {
     debug("Parsed cmdbuffer");
-    CmdBuffer *buffer = cmdBufQueuePop(&(device->cmdbuffer_queue));
+    CmdBuffer *buffer = cmdBufQueuePop(&(internal_device->cmdbuffer_queue));
     /* A NULL buffer might have been added for various reasons; if so,
      just skip ahead */
     if (buffer == NULL) {
@@ -418,31 +439,31 @@ void rtParseCmdBuffers(Device *device) {
       switch (packet_header->header) {
         case PACK_TYPE_SETRENDERTARGET: {
           PacketSetRenderTarget *packet = (PacketSetRenderTarget *)read_ptr;
-          debug("Parsed render target packet, addr: %#x", packet);
+          debug("Parsed render target packet, addr: %p", (void *)packet);
           packet_size = sizeof(PacketSetRenderTarget);
           break;
         }
         case PACK_TYPE_SETVERTExBUFFER: {
           PacketSetVertexBuffer *packet = (PacketSetVertexBuffer *)read_ptr;
-          debug("Parsed vertex buffer packet, addr: %#x", packet);
+          debug("Parsed vertex buffer packet, addr: %p", (void *)packet);
           packet_size = sizeof(PacketSetVertexBuffer);
           break;
         }
         case PACK_TYPE_SETCULLMODE: {
           PacketSetCullMode *packet = (PacketSetCullMode *)read_ptr;
-          debug("Parsed cull mode packet, value: %#x", packet->value);
+          debug("Parsed cull mode packet, value: %d", packet->value);
           packet_size = sizeof(PacketSetCullMode);
           break;
         }
         case PACK_TYPE_SETWINDINGORDER: {
           PacketSetWindingOrder *packet = (PacketSetWindingOrder *)read_ptr;
-          debug("Parsed winding order packet, value: %#x", packet->value);
+          debug("Parsed winding order packet, value: %d", packet->value);
           packet_size = sizeof(PacketSetWindingOrder);
           break;
         }
         case PACK_TYPE_DRAWAUTOTYPE: {
           PacketDrawAuto *packet = (PacketDrawAuto *)read_ptr;
-          debug("Parsed draw auto packet, count: %#x", packet->count);
+          debug("Parsed draw auto packet, count: %d", packet->count);
           packet_size = sizeof(PacketDrawAuto);
           break;
         }
@@ -454,6 +475,12 @@ void rtParseCmdBuffers(Device *device) {
     buffer->current = buffer->start;
 
   }
+
+  return 0;
+
+error:
+
+  return -1;
 }
 
 int32_t cmdBufQueueInit(CmdBuffersQueue *cmdbuffer_queue) {
@@ -463,7 +490,7 @@ int32_t cmdBufQueueInit(CmdBuffersQueue *cmdbuffer_queue) {
   cmdbuffer_queue->front = NULL;
   cmdbuffer_queue->rear = NULL;
 
-  debug("cmdBufQueueInit(): Initialised queue addr: %#x", cmdbuffer_queue);
+  debug("cmdBufQueueInit(): Initialised queue addr: %p", (void *)cmdbuffer_queue);
   return 0;
 
 error:
@@ -492,7 +519,7 @@ CmdBuffer *cmdBufQueuePop(CmdBuffersQueue *queue) {
     }
   }
 
-  debug("cmdBufQueuePop(): Popped an item, addr: %#x", popped_cmdbuffer);
+  debug("cmdBufQueuePop(): Popped an item, addr: %p", (void *)popped_cmdbuffer);
   return popped_cmdbuffer;
 
 error:
@@ -517,7 +544,7 @@ void cmdBufQueuePush(CmdBuffersQueue *queue, CmdBuffer *cmdbuffer) {
 
   queue->lenght ++;
 
-  debug("cmdBufQueuePush(): Pushed an item, addr: %#x", cmdbuffer);
+  debug("cmdBufQueuePush(): Pushed an item, addr: %p", (void *)cmdbuffer);
 }
 
 void cmdBufQueueClear(CmdBuffersQueue *queue) {

@@ -4,7 +4,9 @@
 
 #include <stdint.h>
 
-typedef struct Device Device;
+typedef struct Device {
+  uint32_t opaque_words[1024U];
+} Device;
 typedef struct RenderTarget RenderTarget;
 typedef struct VertexBuffer VertexBuffer;
 typedef struct CmdBuffer CmdBuffer;
@@ -20,9 +22,9 @@ typedef enum CullModeValues {
 typedef struct State State;
 
 
-Device *rtCreateDevice();
+int32_t rtInitDevice(Device *device);
 
-void rtDestroyDevice(Device *device);
+int32_t rtClearDevice(Device *device);
 
 CmdBuffer *rtCreateCmdBuffer(uint32_t size_bytes);
 
@@ -50,8 +52,8 @@ int32_t rtSetCullMode(CmdBuffer *cmdbuffer, CullModeValues value);
 
 int32_t rtDrawAuto(CmdBuffer *cmdbuffer, uint32_t count);
 
-void rtSubmit(Device *device, CmdBuffer *cmdbuffer);
+int32_t rtSubmit(Device *device, CmdBuffer *cmdbuffer);
 
-void rtParseCmdBuffers(Device *device);
+int32_t rtParseCmdBuffers(Device *device);
 
 #endif

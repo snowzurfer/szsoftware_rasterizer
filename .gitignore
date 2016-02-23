@@ -33,7 +33,13 @@ build/
 # VIM files
 *.swp
 *~
+.ycm_extra_conf.py
+.ycm_extra_conf.pyc
+
+#Notes
+steven_notes_23-02-16
 
 # Specific files
 include/lock_free_queue.h
 src/lock_free_queue.cpp
+
