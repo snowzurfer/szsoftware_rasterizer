@@ -3,11 +3,20 @@
 #include "rasterizer.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "dbg.h"
 
 int main() {
+  int32_t rc = -1;
+
   Device device;
-  rtInitDevice(&device);
-  CmdBuffer *cmdbuf = rtCreateCmdBuffer(4096U);
+  rc = rtInitDevice(&device);
+  check(rc != -1, "Device couldn't be initialised");
+
+  CmdBuffer cmdbuff;
+  /* The data will be used by the CmdBuffer structure to store the commands */
+  uint8_t cmdbuff_data[4096U]; 
+  rc = rtInitCmdBuffer(&cmdbuff, &cmdbuff_data, 4096U);
+  check(rc != -1, "Cmdbuffer couldn't be initialised");
 
   uint32_t num_vertices = 3;
   uint32_t vertex_size = sizeof(float) * 3;
@@ -16,28 +25,37 @@ int main() {
     vertices[i] = (float)i;
   }
 
-  VertexBuffer *vtxbuff = rtCreateVertexBuffer(vertices,
+  VertexBuffer vtxbuff;
+  rc = rtInitVertexBuffer(&vtxbuff, vertices,
     vertex_size * num_vertices, vertex_size);
-  free(vertices);
-
-  RenderTarget *target = rtCreateRenderTarget(800U, 600U);
+  check(rc != -1, "VBuffer couldn't be initialised");
 
 
-  rtSetRenderTarget(cmdbuf, target);
-  rtSetVertexBuffer(cmdbuf, vtxbuff);
-  rtSetWindingOrder(cmdbuf, RAST_WINDING_ORDER_CCW);
-  rtSetCullMode(cmdbuf, RAST_CULL_MODE_BACK);
-  rtDrawAuto(cmdbuf, num_vertices);
+  RenderTarget target;
+  rc = rtInitRenderTarget(&target, 800U, 600U);
+  check(rc != -1, "Target couldn't be initialised");
 
-  rtSubmit(&device, cmdbuf);
+  rtSetRenderTarget(&cmdbuff, &target);
+  rtSetVertexBuffer(&cmdbuff, &vtxbuff);
+  rtSetWindingOrder(&cmdbuff, RAST_WINDING_ORDER_CCW);
+  rtSetCullMode(&cmdbuff, RAST_CULL_MODE_BACK);
+  rtDrawAuto(&cmdbuff, num_vertices);
+
+  rtSubmit(&device, &cmdbuff);
 
   rtParseCmdBuffers(&device);
   
-  rtDestroyRenderTarget(target);
-  rtDestroyVertexBuffer(vtxbuff);
-  rtDestroyCmdBuffer(cmdbuf);
+  rtClearRenderTarget(&target);
+  free(vertices);
+  rtClearVertexBuffer(&vtxbuff);
+  rtClearCmdBuffer(&cmdbuff);
   rtClearDevice(&device);
 
   getc(stdin);
+  
   return 0;
+
+error:
+
+  return -1;
 };

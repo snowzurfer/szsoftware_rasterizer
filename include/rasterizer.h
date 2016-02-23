@@ -7,9 +7,16 @@
 typedef struct Device {
   uint32_t opaque_words[1024U];
 } Device;
-typedef struct RenderTarget RenderTarget;
-typedef struct VertexBuffer VertexBuffer;
-typedef struct CmdBuffer CmdBuffer;
+typedef struct RenderTarget {
+ uint32_t opaque_words[1024U]; 
+} RenderTarget;
+typedef struct VertexBuffer {
+ uint32_t opaque_words[1024U]; 
+} VertexBuffer;
+typedef struct CmdBuffer {
+ uint32_t opaque_words[1024U]; 
+} CmdBuffer;
+
 typedef enum WindingValues {
   RAST_WINDING_ORDER_CW,
   RAST_WINDING_ORDER_CCW,
@@ -19,40 +26,37 @@ typedef enum CullModeValues {
   RAST_CULL_MODE_BACK,
   RAST_CULL_MODE_FRONT_AND_BACK,
 } CullModeValues;
-typedef struct State State;
 
 
 int32_t rtInitDevice(Device *device);
 
 int32_t rtClearDevice(Device *device);
 
-CmdBuffer *rtCreateCmdBuffer(uint32_t size_bytes);
+int32_t rtInitCmdBuffer(CmdBuffer *cmdbuff, void *data, uint32_t size_bytes);
 
-void rtDestroyCmdBuffer(CmdBuffer *cmdbuffer);
+int32_t rtClearCmdBuffer(CmdBuffer *cmdbuff);
 
-/* Other options for the signature of this method:
- - VertexBuffer *rtCreate...(uint32_t size_elements, uint32_t size_bytes_vertex)
-*/
-VertexBuffer *rtCreateVertexBuffer(void *data, uint32_t size_data,
-  uint32_t size_element);
+int32_t rtInitVertexBuffer(VertexBuffer *vbuff, void *data, uint32_t size_data,
+                           uint32_t size_element);
 
-void rtDestroyVertexBuffer(VertexBuffer *buffer);
+int32_t rtClearVertexBuffer(VertexBuffer *vbuff);
 
-RenderTarget *rtCreateRenderTarget(uint32_t widht, uint32_t height);
+int32_t rtInitRenderTarget(RenderTarget *target, uint32_t width,
+                           uint32_t height);
 
-void rtDestroyRenderTarget(RenderTarget *target);
+int32_t rtClearRenderTarget(RenderTarget *target);
 
-int32_t rtSetRenderTarget(CmdBuffer *cmdbuffer, RenderTarget *target);
+int32_t rtSetRenderTarget(CmdBuffer *cmdbuff, RenderTarget *target);
 
-int32_t rtSetVertexBuffer(CmdBuffer *cmdbuffer, VertexBuffer *buffer);
+int32_t rtSetVertexBuffer(CmdBuffer *cmdbuff, VertexBuffer *vbuff);
 
-int32_t rtSetWindingOrder(CmdBuffer *cmdbuffer, WindingValues value);
+int32_t rtSetWindingOrder(CmdBuffer *cmdbuff, WindingValues value);
 
-int32_t rtSetCullMode(CmdBuffer *cmdbuffer, CullModeValues value);
+int32_t rtSetCullMode(CmdBuffer *cmdbuff, CullModeValues value);
 
-int32_t rtDrawAuto(CmdBuffer *cmdbuffer, uint32_t count);
+int32_t rtDrawAuto(CmdBuffer *cmdbuff, uint32_t count);
 
-int32_t rtSubmit(Device *device, CmdBuffer *cmdbuffer);
+int32_t rtSubmit(Device *device, CmdBuffer *cmdbuff);
 
 int32_t rtParseCmdBuffers(Device *device);
 
