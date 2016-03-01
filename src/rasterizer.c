@@ -54,6 +54,13 @@ typedef struct PacketHeader {
   };
 } PacketHeader;
 
+typedef struct IndexBufferInt {
+  uint32_t *data;
+  uint32_t indices_num;
+} IndexBufferInt;
+static_assert(sizeof(IndexBuffer) >= sizeof(IndexBufferInt),
+  "Size of IndexBuffer must be >= the size of IndexBufferInt");
+
 /* Packets type consts are very rough. A better method to store this information
  will be developed. */
 typedef struct PacketSetVertexBuffer {
@@ -85,6 +92,11 @@ typedef struct PacketDrawAuto{
 } PacketDrawAuto;
 #define PACK_TYPE_DRAWAUTOTYPE 4U
 static const uint8_t PacketDrawAutoType = 4;
+typedef struct PacketSetIndexBuffer {
+  PacketHeader packet_header;
+  IndexBufferInt *buffer;
+} PacketSetIndexBuffer;
+#define PACK_TYPE_SETINDEXBUFFER 5U
 
 
 typedef struct DeviceState {
@@ -208,7 +220,7 @@ int32_t rtInitVertexBuffer(VertexBuffer *vbuff, void *data, uint32_t size_data,
   }
 #endif
 
-  debug("rtCreateVertexBuffer(): Initialised vertex buffer, addr: %p",
+  debug("rtInitVertexBuffer(): Initialised vertex buffer, addr: %p",
     (void *)vbuff);
 
   return 0;
@@ -226,7 +238,51 @@ int32_t rtClearVertexBuffer(VertexBuffer *vbuff) {
   internal_vbuff->vert_num = 0U;
   internal_vbuff->data = NULL;
 
-  debug("rtDestroyVertexBuffer(): Cleared vertex buffer");
+  debug("rtClearVertexBuffer(): Cleared vertex buffer");
+
+  return 0;
+
+error:
+  
+  return -1;
+}
+
+int32_t rtInitIndexBuffer(IndexBuffer *ibuff, uint32_t *data,
+                          uint32_t size_data) {
+  check(ibuff != NULL, "rtInitIndexBuffer(): ibuff ptr passed is NULL");
+
+  IndexBufferInt *internal_ibuff  = (IndexBufferInt *)ibuff;
+
+  internal_ibuff->data = data;
+
+  internal_ibuff->indices_num = size_data / sizeof(uint32_t);
+
+#ifndef NDEBUG
+  for (uint32_t i = 0; i < internal_ibuff->indices_num; i++) {
+    printf("\tIndx %d: %d\n", i,
+      internal_ibuff->data[i]);
+  }
+#endif
+
+  debug("rtInitIndexBuffer(): Initialised index buffer, addr: %p",
+    (void *)ibuff);
+
+  return 0;
+
+error:
+
+  return -1;
+}
+
+int32_t rtClearIndexBuffer(IndexBuffer *ibuff) {
+  check(ibuff != NULL, "rtClearIndexBuffer(): ptr passed is NULL");
+
+  IndexBufferInt *internal_ibuff  = (IndexBufferInt *)ibuff;
+
+  internal_ibuff->indices_num = 0U;
+  internal_ibuff->data = NULL;
+
+  debug("rtClearIndexBuffer(): Cleared index buffer");
 
   return 0;
 
@@ -324,6 +380,33 @@ int32_t rtSetVertexBuffer(CmdBuffer *cmdbuff, VertexBuffer *buffer) {
   internal_cmdbuff->current += sizeof(PacketSetVertexBuffer);
 
   debug("rtSetVertexBuffer(): Set vertex buffer %p in cmdbuff %p",
+    (void *)buffer, (void *)cmdbuff);
+  
+  return 0;
+
+error:
+  
+  return -1;
+}
+
+int32_t rtSetIndexBuffer(CmdBuffer *cmdbuff, IndexBuffer *buffer) {
+  CmdBufferInt *internal_cmdbuff = (CmdBufferInt *)cmdbuff;
+  
+  /* Check that the cmd buffer has enough space for the new packet */
+  int32_t space_left = internal_cmdbuff->end - internal_cmdbuff->current;
+  check((sizeof(PacketSetIndexBuffer) <= space_left), "rtSetIndexBuffer():\
+ the cmdbuff doesn't have enough space left for the new command");
+
+  check(buffer != NULL, "rtSetIndexBuffer(): buffer passed is NULL");
+
+  PacketSetIndexBuffer *packet =
+    (PacketSetIndexBuffer *)internal_cmdbuff->current;
+  packet->packet_header.header = PACK_TYPE_SETINDEXBUFFER;
+  packet->buffer = (IndexBufferInt *)buffer;
+
+  internal_cmdbuff->current += sizeof(PacketSetIndexBuffer);
+
+  debug("rtSetIndexBuffer(): Set index buffer %p in cmdbuff %p",
     (void *)buffer, (void *)cmdbuff);
   
   return 0;
@@ -478,6 +561,12 @@ int32_t rtParseCmdBuffers(Device *device) {
           PacketDrawAuto *packet = (PacketDrawAuto *)read_ptr;
           debug("Parsed draw auto packet, count: %d", packet->count);
           packet_size = sizeof(PacketDrawAuto);
+          break;
+        }
+        case PACK_TYPE_SETINDEXBUFFER: {
+          PacketSetIndexBuffer *packet = (PacketSetIndexBuffer *)read_ptr;
+          debug("Parsed index buffer packet, addr: %p", (void *)packet);
+          packet_size = sizeof(PacketSetIndexBuffer);
           break;
         }
       }

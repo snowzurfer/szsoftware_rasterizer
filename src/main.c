@@ -30,6 +30,15 @@ int main() {
     vertex_size * num_vertices, vertex_size);
   check(rc != -1, "VBuffer couldn't be initialised");
 
+  uint32_t num_indices = 3;
+  uint32_t *indices = (uint32_t *)malloc(sizeof(uint32_t) * num_indices);
+  for (uint32_t i = 0; i < 3; i++) {
+    indices[i] = i;
+  }
+
+  IndexBuffer indbuff;
+  rc = rtInitIndexBuffer(&indbuff, indices, num_indices * sizeof(uint32_t));
+  check(rc != -1, "IBuffer couldn't be initialised");
 
   RenderTarget target;
   rc = rtInitRenderTarget(&target, 800U, 600U);
@@ -37,6 +46,7 @@ int main() {
 
   rtSetRenderTarget(&cmdbuff, &target);
   rtSetVertexBuffer(&cmdbuff, &vtxbuff);
+  rtSetIndexBuffer(&cmdbuff, &indbuff);
   rtSetWindingOrder(&cmdbuff, RAST_WINDING_ORDER_CCW);
   rtSetCullMode(&cmdbuff, RAST_CULL_MODE_BACK);
   rtDrawAuto(&cmdbuff, num_vertices);
@@ -47,6 +57,7 @@ int main() {
   
   rtClearRenderTarget(&target);
   free(vertices);
+  rtClearIndexBuffer(&indbuff);
   rtClearVertexBuffer(&vtxbuff);
   rtClearCmdBuffer(&cmdbuff);
   rtClearDevice(&device);

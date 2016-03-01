@@ -16,6 +16,9 @@ typedef struct VertexBuffer {
 typedef struct CmdBuffer {
  uint32_t opaque_words[1024U]; 
 } CmdBuffer;
+typedef struct IndexBuffer {
+ uint32_t opaque_words[1024U]; 
+} IndexBuffer;
 
 typedef enum WindingValues {
   RAST_WINDING_ORDER_CW,
@@ -41,6 +44,11 @@ int32_t rtInitVertexBuffer(VertexBuffer *vbuff, void *data, uint32_t size_data,
 
 int32_t rtClearVertexBuffer(VertexBuffer *vbuff);
 
+/* Index buffer is made of uint32s */ 
+int32_t rtInitIndexBuffer(IndexBuffer *ibuff, uint32_t *data, uint32_t size_data);
+
+int32_t rtClearIndexBuffer(IndexBuffer *ibuff);
+
 int32_t rtInitRenderTarget(RenderTarget *target, uint32_t width,
                            uint32_t height);
 
@@ -49,6 +57,8 @@ int32_t rtClearRenderTarget(RenderTarget *target);
 int32_t rtSetRenderTarget(CmdBuffer *cmdbuff, RenderTarget *target);
 
 int32_t rtSetVertexBuffer(CmdBuffer *cmdbuff, VertexBuffer *vbuff);
+
+int32_t rtSetIndexBuffer(CmdBuffer *cmdbuff, IndexBuffer *ibuff);
 
 int32_t rtSetWindingOrder(CmdBuffer *cmdbuff, WindingValues value);
 
