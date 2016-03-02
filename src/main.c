@@ -40,8 +40,12 @@ int main() {
   rc = rtInitIndexBuffer(&indbuff, indices, num_indices * sizeof(uint32_t));
   check(rc != -1, "IBuffer couldn't be initialised");
 
+  uint32_t target_w = 800U;
+  uint32_t target_h = 600U;
   RenderTarget target;
-  rc = rtInitRenderTarget(&target, 800U, 600U);
+  uint8_t *target_data =
+    (uint8_t *)malloc(sizeof(uint32_t) * target_w * target_h);
+  rc = rtInitRenderTarget(&target, target_data, target_w, target_h);
   check(rc != -1, "Target couldn't be initialised");
 
   rtSetRenderTarget(&cmdbuff, &target);

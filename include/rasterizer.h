@@ -49,7 +49,7 @@ int32_t rtInitIndexBuffer(IndexBuffer *ibuff, uint32_t *data, uint32_t size_data
 
 int32_t rtClearIndexBuffer(IndexBuffer *ibuff);
 
-int32_t rtInitRenderTarget(RenderTarget *target, uint32_t width,
+int32_t rtInitRenderTarget(RenderTarget *target, void *data, uint32_t width,
                            uint32_t height);
 
 int32_t rtClearRenderTarget(RenderTarget *target);

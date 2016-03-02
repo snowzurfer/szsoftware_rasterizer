@@ -12,7 +12,7 @@ typedef struct RenderTargetInt {
   uint32_t width;
   uint32_t height;
   uint32_t pitch;
-  /* Assume RBGA format; in future iterations it will be modifiable */
+  /* Assume RBGA format in uint32; in future iterations it will be modifiable */
 } RenderTargetInt;
 static_assert(sizeof(RenderTarget) >= sizeof(RenderTargetInt),
   "Size of RenderTarget must be >= the size of RenderTargetInt");
