@@ -24,10 +24,20 @@ include_directories(
 set(SZRAST_HEADERS
   ${SZRAST_INCLUDE_DIR}/dbg.h
   ${SZRAST_INCLUDE_DIR}/rasterizer.h
+  ${SZRAST_SOURCE_DIR}/vertex_buffer.h
+  ${SZRAST_SOURCE_DIR}/index_buffer.h
+  ${SZRAST_SOURCE_DIR}/render_target.h
+  ${SZRAST_SOURCE_DIR}/command_buffer.h
+  ${SZRAST_SOURCE_DIR}/device.h
 )
 set(SZRAST_SOURCES
   ${SZRAST_SOURCE_DIR}/main.c
   ${SZRAST_SOURCE_DIR}/rasterizer.c
+  ${SZRAST_SOURCE_DIR}/vertex_buffer.c
+  ${SZRAST_SOURCE_DIR}/index_buffer.c
+  ${SZRAST_SOURCE_DIR}/render_target.c
+  ${SZRAST_SOURCE_DIR}/command_buffer.c
+  ${SZRAST_SOURCE_DIR}/device.c
 )
 
 # Create the executable
