@@ -1,3 +1,6 @@
 [submodule "external/szthreadpool"]
 	path = external/szthreadpool
 	url = https://github.com/snowzurfer/szthreadpool.git
+[submodule "external/kazmath"]
+	path = external/kazmath
+	url = https://github.com/Kazade/kazmath.git

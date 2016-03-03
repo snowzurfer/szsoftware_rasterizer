@@ -14,10 +14,17 @@ set(SZRAST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(SZTHREADPOOL_BUILD_EXE FALSE)
 add_subdirectory(${SZRAST_EXTERNAL_DIR}/szthreadpool)
 
+# Add the kazmath library
+option(KAZMATH_BUILD_TESTS OFF)
+option(KAZMATH_BUILD_GL_UTILS OFF)
+option(KAZMATH_BUILD_JNI_WRAPPER OFF)
+add_subdirectory(${SZRAST_EXTERNAL_DIR}/kazmath)
+
 # Set include dirs for the project
 include_directories(
   ${SZRAST_INCLUDE_DIR}
   ${SZTHREADPOOL_INCLUDE_DIR}
+  ${SZRAST_EXTERNAL_DIR}/kazmath/kazmath
 )
 
 # Set headers and sources for the szutl library
@@ -44,8 +51,11 @@ set(SZRAST_SOURCES
 add_executable(szrast ${SZRAST_HEADERS} ${SZRAST_SOURCES})
 
 # Link target (the executable) with libraries
+find_library(M_LIB m)
 target_link_libraries(szrast
   libszthpool
+  kazmath
+  ${M_LIB}
 )
 
 # Set the output directories for the libraries and binaries
