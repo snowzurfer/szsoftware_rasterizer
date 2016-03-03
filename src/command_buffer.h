@@ -80,7 +80,7 @@ typedef struct PacketSetIndexBuffer {
 int32_t cmdBufQueueInit(CmdBuffersQueue *cmdbuffer_queue);
 CmdBufferInt *cmdBufQueuePop(CmdBuffersQueue *cmdbuffer_queue);
 void cmdBufQueuePush(CmdBuffersQueue *cmdbuffer_queue,
-                               CmdBufferInt *cmdbuff);
+                     CmdBufferInt *cmdbuff);
 void cmdBufQueueClear(CmdBuffersQueue *cmdbuffer_queue);
 
 

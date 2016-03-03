@@ -18,6 +18,9 @@ typedef struct DeviceState {
 typedef struct DeviceInt {
   DeviceState state;
   CmdBuffersQueue cmdbuffer_queue;
+  struct VertexBufferInt *vbuff;
+  struct IndexBufferInt *ibuff;
+  struct RenderTargetInt *target;
 } DeviceInt;
 static_assert(sizeof(Device) >= sizeof(DeviceInt),
   "Size of Device must be >= the size of DeviceInt");

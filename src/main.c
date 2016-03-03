@@ -18,21 +18,21 @@ int main() {
   rc = rtInitCmdBuffer(&cmdbuff, &cmdbuff_data, 4096U);
   check(rc != -1, "Cmdbuffer couldn't be initialised");
 
-  uint32_t num_vertices = 3;
-  uint32_t vertex_size = sizeof(float) * 3;
+  uint32_t num_vertices = 3U;
+  uint32_t vertex_size = sizeof(float) * 3U;
   float *vertices = (float *)malloc(vertex_size * num_vertices);
-  for (uint32_t i = 0; i < 3 * num_vertices; i++) {
-    vertices[i] = (float)i;
-  }
+  vertices[0U] = -0.8f; vertices[1U] = -0.8f; vertices[2U] = 1.f;
+  vertices[3U] = 0.f; vertices[4U] = 0.8f; vertices[5U] = 1.f;
+  vertices[6U] = 0.8f; vertices[7U] = -0.8f; vertices[8U] = 1.f;
 
   VertexBuffer vtxbuff;
   rc = rtInitVertexBuffer(&vtxbuff, vertices,
     vertex_size * num_vertices, vertex_size);
   check(rc != -1, "VBuffer couldn't be initialised");
 
-  uint32_t num_indices = 3;
+  uint32_t num_indices = 3U;
   uint32_t *indices = (uint32_t *)malloc(sizeof(uint32_t) * num_indices);
-  for (uint32_t i = 0; i < 3; i++) {
+  for (uint32_t i = 0U; i < num_indices; i++) {
     indices[i] = i;
   }
 
@@ -58,15 +58,36 @@ int main() {
   rtSubmit(&device, &cmdbuff);
 
   rtParseCmdBuffers(&device);
+
+  /*Render to ppm to test out rendering*/
+  uint32_t u32_size = sizeof(uint32_t);
+  FILE *of = fopen("render.ppm", "wb");
+  fprintf(of, "P6\n%d %d\n255\n", target_w, target_h);
+  for(uint32_t j = 0U; j < target_h; j++) {
+    for(uint32_t i = 0U; i < target_w; i++) {
+      static uint8_t colour[3U];
+      colour[0U] = target_data[u32_size * (j * target_w + i)];
+      colour[1U] = target_data[u32_size * (j * target_w + i) + 1U];
+      colour[2U] = target_data[u32_size * (j * target_w + i) + 2U];
+      fwrite(colour, 1U, 3U, of);
+    }
+  }
+
+  fclose(of);
   
   rtClearRenderTarget(&target);
+  free(target_data);
+  free(indices);
   free(vertices);
   rtClearIndexBuffer(&indbuff);
+  /*for (uint32_t i = 0U; i < 3U * num_vertices; i++) {*/
+    /*vertices[i] = (float)i;*/
+  /*}*/
   rtClearVertexBuffer(&vtxbuff);
   rtClearCmdBuffer(&cmdbuff);
   rtClearDevice(&device);
 
-  getc(stdin);
+  /*getc(stdin);*/
   
   return 0;
 

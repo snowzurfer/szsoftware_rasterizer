@@ -8,7 +8,44 @@
 #include "render_target.h"
 #include "command_buffer.h"
 #include "device.h"
+#include "vec2.h"
+#include "vec3.h"
 
+
+typedef struct Triangle {
+  kmVec3 vertices[3U];
+} Triangle;
+
+/*typedef struct Point2D {*/
+  
+/*}*/
+
+typedef struct TrisQueue {
+  Triangle *front;
+  Triangle *back;
+  Triangle *start;
+  Triangle *end;
+} TrisQueue;
+static int32_t trisQueueInit(TrisQueue *queue, Triangle *tris_batch,
+                             uint32_t lenght);
+static Triangle *trisQueuePop(TrisQueue *queue);
+static int32_t trisQueuePush(TrisQueue *queue, Triangle *tri);
+static void trisQueueClear(TrisQueue *queue);
+static uint32_t trisQueueGetSize(TrisQueue *queue);
+
+
+
+static int32_t rtVertexShading(DeviceInt *device, uint32_t draw_num,
+                               TrisQueue *tri_queue_out);
+static int32_t rtPixelShading(DeviceInt *device, TrisQueue *tri_queue_in);
+/*Default is CCW; c is the pt to test against; a -> b, a -> c*/
+static float rtEdgeFunction(const kmVec2 *a, const kmVec2 *b,
+                              const kmVec2 *c);
+static void rtDrawTri(const Triangle *tri, RenderTargetInt *target);
+static uint32_t rtU32Min3(uint32_t a, uint32_t b, uint32_t c);
+static uint32_t rtU32Max3(uint32_t a, uint32_t b, uint32_t c);
+static uint32_t rtU32Min(uint32_t a, uint32_t b);
+static uint32_t rtU32Max(uint32_t a, uint32_t b);
 
 
 
@@ -213,37 +250,56 @@ int32_t rtParseCmdBuffers(Device *device) {
         case PACK_TYPE_SETRENDERTARGET: {
           PacketSetRenderTarget *packet = (PacketSetRenderTarget *)read_ptr;
           debug("Parsed render target packet, addr: %p", (void *)packet);
+
           packet_size = sizeof(PacketSetRenderTarget);
+
+          internal_device->target = packet->target;
           break;
         }
         case PACK_TYPE_SETVERTExBUFFER: {
           PacketSetVertexBuffer *packet = (PacketSetVertexBuffer *)read_ptr;
           debug("Parsed vertex buffer packet, addr: %p", (void *)packet);
+
           packet_size = sizeof(PacketSetVertexBuffer);
+
+          internal_device->vbuff = packet->buffer;
           break;
         }
         case PACK_TYPE_SETCULLMODE: {
           PacketSetCullMode *packet = (PacketSetCullMode *)read_ptr;
           debug("Parsed cull mode packet, value: %d", packet->value);
+
           packet_size = sizeof(PacketSetCullMode);
+
+          internal_device->state.values[STATE_CULL_MODE] = packet->value;
           break;
         }
         case PACK_TYPE_SETWINDINGORDER: {
           PacketSetWindingOrder *packet = (PacketSetWindingOrder *)read_ptr;
           debug("Parsed winding order packet, value: %d", packet->value);
+
           packet_size = sizeof(PacketSetWindingOrder);
+
+          internal_device->state.values[STATE_WINDING] = packet->value;
           break;
         }
         case PACK_TYPE_DRAWAUTOTYPE: {
           PacketDrawAuto *packet = (PacketDrawAuto *)read_ptr;
           debug("Parsed draw auto packet, count: %d", packet->count);
+
           packet_size = sizeof(PacketDrawAuto);
+
+          /* Launch rendering */
+          TrisQueue tris_fifo;
+          rtVertexShading(internal_device, packet->count, &tris_fifo);
+          rtPixelShading(internal_device, &tris_fifo);
           break;
         }
         case PACK_TYPE_SETINDEXBUFFER: {
           PacketSetIndexBuffer *packet = (PacketSetIndexBuffer *)read_ptr;
           debug("Parsed index buffer packet, addr: %p", (void *)packet);
           packet_size = sizeof(PacketSetIndexBuffer);
+          internal_device->ibuff = packet->buffer;
           break;
         }
       }
@@ -260,4 +316,234 @@ int32_t rtParseCmdBuffers(Device *device) {
 error:
 
   return -1;
+}
+
+int32_t rtVertexShading(DeviceInt *device, uint32_t draw_num,
+                               TrisQueue *tri_queue_out) {
+      
+  uint32_t indices_num = device->ibuff->indices_num;
+
+  /*Create the list of triangles first*/
+  uint32_t tris_num = indices_num / 3U;
+  Triangle *tris_batch =
+    (Triangle *)malloc(sizeof(Triangle) * tris_num);
+
+  trisQueueInit(tri_queue_out, tris_batch, tris_num);
+
+  check(tris_batch != NULL, "[INTERNAL] rtVertexShading(): couldn't allocate \
+      memory for the batch of triangles!");
+
+  /*For all the indices */
+  uint32_t tris_count = 0U;
+  for(uint32_t i = 0U; i < indices_num; i++) {
+    kmVec3 v0;
+    uint32_t index_num = device->ibuff->data[i];
+    kmVec3Fill(
+        &v0,
+        *(device->vbuff->data + (index_num * 3U)),
+        *(device->vbuff->data + (index_num * 3U) + 1U),
+        1.f);
+
+    /* Convert to camera space (MV matrix) */
+
+    /* Convert to screen space (P matrix) */
+    
+    /* Convert to NDC space (range [-1, 1]) */
+
+
+    /* Convert to raster space */ 
+    v0.x = (v0.x + 1.f) / 2.f * (float)device->target->width;
+    v0.y = (1.f - v0.y) / 2.f * (float)device->target->height;
+
+    
+    /*Add this vertex to the triangle*/
+    tris_batch[i / 3U].vertices[i % 3U] = v0;
+
+    /*When triangle full*/
+    if((i % 3U) == 2U) {
+      /*Push into queue*/
+      trisQueuePush(tri_queue_out, tris_batch + tris_count);
+      tris_count ++;
+    }
+  }
+
+  debug("rtVertexShading(): Completed");
+  return 0;
+
+error:
+
+  debug("rtVertexShading(): Error, exiting");
+  return -1;
+  
+}
+int32_t rtPixelShading(DeviceInt *device, TrisQueue *tri_queue_in) {
+  /*For all the triangles*/
+  Triangle *tri = trisQueuePop(tri_queue_in);
+  while(tri != NULL) {
+    /*Render them  */
+    rtDrawTri(tri, device->target);   
+
+    tri = trisQueuePop(tri_queue_in);
+  }
+
+  trisQueueClear(tri_queue_in);
+
+  debug("rtPixelShading(): Completed");
+  return 0;
+}
+
+int32_t trisQueueInit(TrisQueue *tris_queue, Triangle *tris_batch, uint32_t lenght) {
+  check_mem(tris_queue);
+
+  tris_queue->end = tris_batch + lenght;
+  tris_queue->start = tris_batch;
+  tris_queue->front = tris_batch;
+  tris_queue->back = tris_batch;
+
+  debug("trisQueueInit(): Initialised queue addr: %p", (void *)tris_queue);
+  return 0;
+
+error:
+
+  return -1;
+}
+
+Triangle *trisQueuePop(TrisQueue *queue) {
+  check(queue->back < queue->front, "trisQueuePop(): the queue is empty!");
+
+  Triangle *popped_triangle = queue->back;
+  queue->back ++;
+
+  debug("trisQueuePop(): Popped an item, addr: %p", (void *)popped_triangle);
+  return popped_triangle;
+
+error:
+
+  return NULL;
+}
+
+int32_t trisQueuePush(TrisQueue *queue, Triangle *tri) {
+  check(queue->front < queue->end, "trisQueuePop(): the queue is full!");
+
+  queue->front = tri;
+  queue->front ++;
+
+  debug("trisQueuePush(): Pushed an item, addr: %p", (void *)tri);
+  return 0;
+
+error:
+
+  return -1;
+}
+
+void trisQueueClear(TrisQueue *queue) {
+  free(queue->start);
+
+  queue->front = NULL;
+  queue->back = NULL;
+  queue->end = NULL;
+  queue->start = NULL;
+
+  debug("trisQueueClear(): cleared a queue");
+}
+
+uint32_t trisQueueGetSize(TrisQueue *queue) {
+  return queue->back - queue->front;
+}
+
+float rtEdgeFunction(const kmVec2 *a, const kmVec2 *b, const kmVec2 *c) {
+  return (b->x - a->x) * (c->y - a->y) - (b->y - a->y) * (c->x - a->x);
+}
+
+void rtDrawTri(const Triangle *tri, RenderTargetInt *target) {
+  /*Compute the triangle's AABB*/
+  int32_t min_x = rtU32Min3(
+      tri->vertices[0].x,
+      tri->vertices[1].x,
+      tri->vertices[2].x);
+  int32_t min_y = rtU32Min3(
+      tri->vertices[0].y,
+      tri->vertices[1].y,
+      tri->vertices[2].y);
+  int32_t max_x = rtU32Max3(
+      tri->vertices[0].x,
+      tri->vertices[1].x,
+      tri->vertices[2].x);
+  int32_t max_y = rtU32Max3(
+      tri->vertices[0].y,
+      tri->vertices[1].y,
+      tri->vertices[2].y);
+
+  /*Clip against screen bounds*/
+  min_x = rtU32Max(min_x, 0U);
+  min_y = rtU32Max(min_y, 0U);
+  max_x = rtU32Min(max_x, target->width - 1U);
+  max_y = rtU32Min(max_y, target->height - 1U);
+
+  /*Rasterize the triangle*/
+  kmVec2 p; /*The pixel position when rasterizing*/
+  kmVec2 v0, v1, v2; /*The vertices of the triangle, but only their XY comps*/
+  kmVec2Fill(&v0, tri->vertices[0U].x, tri->vertices[0U].y);
+  kmVec2Fill(&v1, tri->vertices[1U].x, tri->vertices[1U].y);
+  kmVec2Fill(&v2, tri->vertices[2U].x, tri->vertices[2U].y);
+  float area = rtEdgeFunction(&v0, &v1, &v2);
+  
+  for(uint32_t j = min_y; j  <= max_y; j++) {
+    for(uint32_t i  = min_x; i <= max_x; i++) {
+      kmVec2Fill(&p, i + 0.5f, j + 0.5f);
+      /*TODO: for now assume CCW; in future, account for both cases*/
+      float w0 = rtEdgeFunction(&v1, &v2, &p);     
+      float w1 = rtEdgeFunction(&v2, &v0, &p);     
+      float w2 = rtEdgeFunction(&v0, &v1, &p);     
+
+      /*TODO: account for top and left edges*/
+
+      /*If p is inside or on all the edges*/
+      if(w0 >= 0.f && w1 >= 0.f && w2 >= 0.f) {
+        /*Calculate the barycentric coordinates */
+        w0 /= area;
+        w1 /= area;
+        w2 /= area;
+
+        uint32_t u32_size = sizeof(uint32_t);
+        target->location[u32_size * (j * target->width + i)] = 255U;
+        target->location[u32_size * (j * target->width + i) + 1U] = 255U;
+        target->location[u32_size * (j * target->width + i) + 2U] = 255U;
+        target->location[u32_size * (j * target->width + i) + 3U] = 255U;
+      }
+    } /*p.x for*/ 
+  } /*p.y for*/
+}
+
+uint32_t rtU32Min3(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t min = a;
+
+  if(b < min) {
+    min = b;
+  }
+  if(c < min) {
+    min = c;
+  }
+
+  return min;
+}
+
+uint32_t rtU32Max3(uint32_t a, uint32_t b, uint32_t c) {
+  uint32_t max = a;
+
+  if(b > max) {
+    max = b;
+  }
+  if(c > max) {
+    max = c;
+  }
+
+  return max;
+}
+
+uint32_t rtU32Min(uint32_t a, uint32_t b) {
+  return ((a < b) ? a : b);
+}
+uint32_t rtU32Max(uint32_t a, uint32_t b) {
+  return ((a > b) ? a : b);
 }

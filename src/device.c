@@ -9,6 +9,9 @@ int32_t rtInitDevice(Device *device) {
   DeviceInt  *internal_device = (DeviceInt *)device;
   internal_device->state.values[STATE_WINDING] = RAST_WINDING_ORDER_CCW;
   internal_device->state.values[STATE_CULL_MODE] = RAST_CULL_MODE_BACK;
+  internal_device->vbuff = NULL;
+  internal_device->ibuff = NULL;
+  internal_device->target = NULL;
 
   // Initialise the queue
   int32_t rc = cmdBufQueueInit(&(internal_device->cmdbuffer_queue));
@@ -31,7 +34,13 @@ int32_t rtClearDevice(Device *device) {
   /* Clear also the queue of cmdbuffers */
   cmdBufQueueClear(&(internal_device->cmdbuffer_queue));
 
-  debug("rtClearDevice(): Destroyed device");
+  internal_device->state.values[STATE_WINDING] = RAST_WINDING_ORDER_CCW;
+  internal_device->state.values[STATE_CULL_MODE] = RAST_CULL_MODE_BACK;
+  internal_device->vbuff = NULL;
+  internal_device->ibuff = NULL;
+  internal_device->target = NULL;
+
+  debug("rtClearDevice(): Cleared device");
 
   return 0;
 
