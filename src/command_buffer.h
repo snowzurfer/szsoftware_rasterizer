@@ -9,6 +9,7 @@
 #include "vertex_buffer.h"
 #include "index_buffer.h"
 #include "render_target.h"
+#include "mat4.h"
 
 
 /*              Command buffer-related structures             */
@@ -51,30 +52,41 @@ typedef struct PacketSetRenderTarget {
   RenderTargetInt *target;
 } PacketSetRenderTarget;
 #define PACK_TYPE_SETRENDERTARGET 1U
-static const uint8_t PacketSetRenderTargetType = 0;
 typedef struct PacketSetCullMode {
   PacketHeader packet_header;
   CullModeValues value;
 } PacketSetCullMode;
 #define PACK_TYPE_SETCULLMODE 2U
-static const uint8_t PacketSetCullModeType = 2;
 typedef struct PacketSetWindingOrder{
   PacketHeader packet_header;
   WindingValues value;
 } PacketSetWindingOrder;
 #define PACK_TYPE_SETWINDINGORDER 3U
-static const uint8_t PacketSetWindingOrderType = 3;
 typedef struct PacketDrawAuto{
   PacketHeader packet_header;
   uint32_t count;
 } PacketDrawAuto;
 #define PACK_TYPE_DRAWAUTOTYPE 4U
-static const uint8_t PacketDrawAutoType = 4;
 typedef struct PacketSetIndexBuffer {
   PacketHeader packet_header;
   IndexBufferInt *buffer;
 } PacketSetIndexBuffer;
 #define PACK_TYPE_SETINDEXBUFFER 5U
+typedef struct PacketSetModelMat {
+  PacketHeader packet_header;
+  kmMat4 *mat;
+} PacketSetModelMat;
+#define PACK_TYPE_SETMODELMAT 6U
+typedef struct PacketSetProjectionMat {
+  PacketHeader packet_header;
+  kmMat4 *mat; 
+} PacketSetProjectionMat;
+#define PACK_TYPE_SETPROJECTIONMAT 7U
+typedef struct PacketSetViewMat {
+  PacketHeader packet_header;
+  kmMat4 *mat; 
+} PacketSetViewMat;
+#define PACK_TYPE_SETVIEWMAT 8U
 
 /* Function prototypes */
 int32_t cmdBufQueueInit(CmdBuffersQueue *cmdbuffer_queue);

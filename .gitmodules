@@ -4,3 +4,6 @@
 [submodule "external/kazmath"]
 	path = external/kazmath
 	url = https://github.com/Kazade/kazmath.git
+[submodule "external/sdl"]
+	path = external/sdl
+	url = https://github.com/spurious/SDL-mirror.git

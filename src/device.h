@@ -21,6 +21,9 @@ typedef struct DeviceInt {
   struct VertexBufferInt *vbuff;
   struct IndexBufferInt *ibuff;
   struct RenderTargetInt *target;
+  struct kmMat4 model_mat;
+  struct kmMat4 projection_mat;
+  struct kmMat4 view_mat;
 } DeviceInt;
 static_assert(sizeof(Device) >= sizeof(DeviceInt),
   "Size of Device must be >= the size of DeviceInt");

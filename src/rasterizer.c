@@ -8,9 +8,9 @@
 #include "render_target.h"
 #include "command_buffer.h"
 #include "device.h"
+#include "vec4.h"
 #include "vec2.h"
 #include "vec3.h"
-
 
 typedef struct Triangle {
   kmVec3 vertices[3U];
@@ -32,7 +32,6 @@ static Triangle *trisQueuePop(TrisQueue *queue);
 static int32_t trisQueuePush(TrisQueue *queue, Triangle *tri);
 static void trisQueueClear(TrisQueue *queue);
 static uint32_t trisQueueGetSize(TrisQueue *queue);
-
 
 
 static int32_t rtVertexShading(DeviceInt *device, uint32_t draw_num,
@@ -172,11 +171,12 @@ int32_t rtSetCullMode(CmdBuffer *cmdbuff, CullModeValues value) {
 
   internal_cmdbuff->current += sizeof(PacketSetCullMode);
 
-  debug("rtSetCullMode(): Set cull mode %p in cmdbuff %p",
-    (void *)value, (void *)cmdbuff);
+  debug("rtSetCullMode(): Set cull mode %d in cmdbuff %p",
+    value, (void *)cmdbuff);
   return 0;
 
 error:
+
   return -1;
 }
 
@@ -200,6 +200,78 @@ int32_t rtDrawAuto(CmdBuffer *cmdbuff, uint32_t count) {
   return 0;
 
 error:
+  return -1;
+}
+
+int32_t rtSetModelMat(CmdBuffer *cmdbuff, const float *mat) {
+  CmdBufferInt *internal_cmdbuff = (CmdBufferInt *)cmdbuff;
+  
+  /* Check that the cmd buffer has enough space for the new packet */
+  int32_t space_left = internal_cmdbuff->end - internal_cmdbuff->current;
+  check((sizeof(PacketSetModelMat) <= space_left), "rtSetModelMat():\
+ the cmdbuff doesn't have enough space left for the new command");
+
+  PacketSetModelMat *packet =
+    (PacketSetModelMat *)internal_cmdbuff->current;
+  packet->packet_header.header = PACK_TYPE_SETMODELMAT;
+  packet->mat = (kmMat4 *)mat;
+
+  internal_cmdbuff->current += sizeof(PacketSetModelMat);
+
+  debug("rtSetModelMat(): Set mat %p in cmdbuff %p",
+    (void *)mat, (void *)cmdbuff);
+  return 0;
+
+error:
+
+  return -1;
+}
+
+int32_t rtSetViewMat(CmdBuffer *cmdbuff, const float *mat) {
+  CmdBufferInt *internal_cmdbuff = (CmdBufferInt *)cmdbuff;
+  
+  /* Check that the cmd buffer has enough space for the new packet */
+  int32_t space_left = internal_cmdbuff->end - internal_cmdbuff->current;
+  check((sizeof(PacketSetViewMat) <= space_left), "rtSetViewMat():\
+ the cmdbuff doesn't have enough space left for the new command");
+
+  PacketSetViewMat *packet =
+    (PacketSetViewMat *)internal_cmdbuff->current;
+  packet->packet_header.header = PACK_TYPE_SETVIEWMAT;
+  packet->mat = (kmMat4 *)mat;
+
+  internal_cmdbuff->current += sizeof(PacketSetViewMat);
+
+  debug("rtSetViewMat(): Set mat %p in cmdbuff %p",
+    (void *)mat, (void *)cmdbuff);
+  return 0;
+
+error:
+
+  return -1;
+}
+
+int32_t rtSetProjectionMat(CmdBuffer *cmdbuff, const float *mat) {
+  CmdBufferInt *internal_cmdbuff = (CmdBufferInt *)cmdbuff;
+  
+  /* Check that the cmd buffer has enough space for the new packet */
+  int32_t space_left = internal_cmdbuff->end - internal_cmdbuff->current;
+  check((sizeof(PacketSetProjectionMat) <= space_left), "rtSetProjectionMat():\
+ the cmdbuff doesn't have enough space left for the new command");
+
+  PacketSetProjectionMat *packet =
+    (PacketSetProjectionMat *)internal_cmdbuff->current;
+  packet->packet_header.header = PACK_TYPE_SETPROJECTIONMAT;
+  packet->mat = (kmMat4 *)mat;
+
+  internal_cmdbuff->current += sizeof(PacketSetProjectionMat);
+
+  debug("rtSetProjectionMat(): Set mat %p in cmdbuff %p",
+    (void *)mat, (void *)cmdbuff);
+  return 0;
+
+error:
+
   return -1;
 }
 
@@ -298,8 +370,37 @@ int32_t rtParseCmdBuffers(Device *device) {
         case PACK_TYPE_SETINDEXBUFFER: {
           PacketSetIndexBuffer *packet = (PacketSetIndexBuffer *)read_ptr;
           debug("Parsed index buffer packet, addr: %p", (void *)packet);
+
           packet_size = sizeof(PacketSetIndexBuffer);
+ 
           internal_device->ibuff = packet->buffer;
+          break;
+        }
+        case PACK_TYPE_SETMODELMAT: {
+          PacketSetModelMat *packet = (PacketSetModelMat *)read_ptr;
+          debug("Parsed model mat buffer packet, addr: %p", (void *)packet);
+
+          packet_size = sizeof(PacketSetModelMat);
+
+          internal_device->model_mat = *packet->mat;
+          break;
+        }
+        case PACK_TYPE_SETPROJECTIONMAT: {
+          PacketSetProjectionMat *packet = (PacketSetProjectionMat *)read_ptr;
+          debug("Parsed proj. mat buffer packet, addr: %p", (void *)packet);
+
+          packet_size = sizeof(PacketSetProjectionMat);
+
+          internal_device->projection_mat = *packet->mat;
+          break;
+        }
+        case PACK_TYPE_SETVIEWMAT: {
+          PacketSetViewMat *packet = (PacketSetViewMat *)read_ptr;
+          debug("Parsed view mat buffer packet, addr: %p", (void *)packet);
+
+          packet_size = sizeof(PacketSetViewMat);
+
+          internal_device->view_mat = *packet->mat;
           break;
         }
       }
@@ -320,44 +421,53 @@ error:
 
 int32_t rtVertexShading(DeviceInt *device, uint32_t draw_num,
                                TrisQueue *tri_queue_out) {
-      
   uint32_t indices_num = device->ibuff->indices_num;
 
   /*Create the list of triangles first*/
   uint32_t tris_num = indices_num / 3U;
   Triangle *tris_batch =
     (Triangle *)malloc(sizeof(Triangle) * tris_num);
+  check(tris_batch != NULL, "[INTERNAL] rtVertexShading(): couldn't allocate \
+      memory for the batch of triangles!");
 
   trisQueueInit(tri_queue_out, tris_batch, tris_num);
 
-  check(tris_batch != NULL, "[INTERNAL] rtVertexShading(): couldn't allocate \
-      memory for the batch of triangles!");
+  /*Calculate PVM matrix*/
+  kmMat4 PVM;
+  kmMat4Multiply(&PVM, &device->projection_mat, &device->view_mat);
+  kmMat4Multiply(&PVM, &PVM, &device->model_mat);
 
   /*For all the indices */
   uint32_t tris_count = 0U;
   for(uint32_t i = 0U; i < indices_num; i++) {
-    kmVec3 v0;
+    kmVec4 v0;
     uint32_t index_num = device->ibuff->data[i];
-    kmVec3Fill(
+    kmVec4Fill(
         &v0,
         *(device->vbuff->data + (index_num * 3U)),
         *(device->vbuff->data + (index_num * 3U) + 1U),
+        *(device->vbuff->data + (index_num * 3U) + 2U),
         1.f);
 
-    /* Convert to camera space (MV matrix) */
+    /*Convert to NDC space*/
+    kmVec4 v1;
+    kmVec4MultiplyMat4(&v1, &v0, &PVM);
 
-    /* Convert to screen space (P matrix) */
     
-    /* Convert to NDC space (range [-1, 1]) */
+    /*TODO Clip triangles*/
+    
 
+    kmVec4Scale(&v0, &v1, (1.f / v1.z));
+    kmVec3 vc;
+    kmVec3Fill(&vc, v0.x, v0.y, v0.z);
 
     /* Convert to raster space */ 
-    v0.x = (v0.x + 1.f) / 2.f * (float)device->target->width;
-    v0.y = (1.f - v0.y) / 2.f * (float)device->target->height;
+    vc.x = (vc.x + 1.f) / 2.f * (float)device->target->width;
+    vc.y = (1.f - vc.y) / 2.f * (float)device->target->height;
 
     
     /*Add this vertex to the triangle*/
-    tris_batch[i / 3U].vertices[i % 3U] = v0;
+    tris_batch[i / 3U].vertices[i % 3U] = vc;
 
     /*When triangle full*/
     if((i % 3U) == 2U) {
@@ -409,31 +519,29 @@ error:
 }
 
 Triangle *trisQueuePop(TrisQueue *queue) {
-  check(queue->back < queue->front, "trisQueuePop(): the queue is empty!");
+  if(queue->back >= queue->front) {
+    log_info("trisQueuePop(): the queue is empty!");
+    return NULL;
+  }
 
   Triangle *popped_triangle = queue->back;
   queue->back ++;
 
   debug("trisQueuePop(): Popped an item, addr: %p", (void *)popped_triangle);
   return popped_triangle;
-
-error:
-
-  return NULL;
 }
 
 int32_t trisQueuePush(TrisQueue *queue, Triangle *tri) {
-  check(queue->front < queue->end, "trisQueuePop(): the queue is full!");
+  if(queue->front >= queue->end) {
+    log_info("trisQueuePush(): the queue is full!");
+    return -1;
+  }
 
   queue->front = tri;
   queue->front ++;
 
   debug("trisQueuePush(): Pushed an item, addr: %p", (void *)tri);
   return 0;
-
-error:
-
-  return -1;
 }
 
 void trisQueueClear(TrisQueue *queue) {

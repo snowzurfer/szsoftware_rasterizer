@@ -64,6 +64,12 @@ int32_t rtSetWindingOrder(CmdBuffer *cmdbuff, WindingValues value);
 
 int32_t rtSetCullMode(CmdBuffer *cmdbuff, CullModeValues value);
 
+int32_t rtSetModelMat(CmdBuffer *cmdbuff, const float *mat);
+
+int32_t rtSetViewMat(CmdBuffer *cmdbuff, const float *mat);
+
+int32_t rtSetProjectionMat(CmdBuffer *cmdbuff, const float *mat);
+
 int32_t rtDrawAuto(CmdBuffer *cmdbuff, uint32_t count);
 
 int32_t rtSubmit(Device *device, CmdBuffer *cmdbuff);

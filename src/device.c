@@ -2,6 +2,7 @@
 #include "device.h"
 #include "dbg.h"
 #include <stdint.h>
+#include "mat4.h"
 
 int32_t rtInitDevice(Device *device) {
   check(device != NULL, "rtInitDevice(): device ptr passed is NULL");
@@ -12,6 +13,9 @@ int32_t rtInitDevice(Device *device) {
   internal_device->vbuff = NULL;
   internal_device->ibuff = NULL;
   internal_device->target = NULL;
+  kmMat4Identity(&internal_device->model_mat);
+  kmMat4Identity(&internal_device->projection_mat);
+  kmMat4Identity(&internal_device->view_mat);
 
   // Initialise the queue
   int32_t rc = cmdBufQueueInit(&(internal_device->cmdbuffer_queue));
@@ -39,6 +43,9 @@ int32_t rtClearDevice(Device *device) {
   internal_device->vbuff = NULL;
   internal_device->ibuff = NULL;
   internal_device->target = NULL;
+  kmMat4Identity(&internal_device->model_mat);
+  kmMat4Identity(&internal_device->projection_mat);
+  kmMat4Identity(&internal_device->view_mat);
 
   debug("rtClearDevice(): Cleared device");
 

@@ -20,11 +20,17 @@ option(KAZMATH_BUILD_GL_UTILS OFF)
 option(KAZMATH_BUILD_JNI_WRAPPER OFF)
 add_subdirectory(${SZRAST_EXTERNAL_DIR}/kazmath)
 
+# Add SDL
+set(SDL_SHARED FALSE)
+set(SDL_STATIC TRUE)
+add_subdirectory(${SZRAST_EXTERNAL_DIR}/sdl)
+
 # Set include dirs for the project
 include_directories(
   ${SZRAST_INCLUDE_DIR}
   ${SZTHREADPOOL_INCLUDE_DIR}
   ${SZRAST_EXTERNAL_DIR}/kazmath/kazmath
+  ${SDL2_SOURCE_DIR}/include
 )
 
 # Set headers and sources for the szutl library
@@ -56,6 +62,7 @@ target_link_libraries(szrast
   libszthpool
   kazmath
   ${M_LIB}
+  SDL2-static 
 )
 
 # Set the output directories for the libraries and binaries
