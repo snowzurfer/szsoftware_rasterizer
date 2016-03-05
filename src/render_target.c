@@ -15,12 +15,12 @@ int32_t rtInitRenderTarget(RenderTarget *target, void *data, uint32_t width,
   
   internal_target = (RenderTargetInt *)target;
 
-  internal_target->size_bytes = sizeof(uint32_t *) * width * height;
+  internal_target->size_bytes = sizeof(uint32_t) * width * height;
   internal_target->location = (uint8_t *)data;
 
   internal_target->height = height;
   internal_target->width = width;
-  internal_target->pitch = sizeof(uint32_t *) * width;
+  internal_target->pitch = sizeof(uint32_t) * width;
 
   debug("rtInitRenderTarget(): Initialised target, addr: %p", (void *)target);
   

@@ -72,6 +72,9 @@ int32_t rtSetProjectionMat(CmdBuffer *cmdbuff, const float *mat);
 
 int32_t rtDrawAuto(CmdBuffer *cmdbuff, uint32_t count);
 
+/*Clear the currently set render target to black*/
+int32_t rtClearRenderTarget(CmdBuffer *cmdbuff, RenderTarget *target);
+
 int32_t rtSubmit(Device *device, CmdBuffer *cmdbuff);
 
 int32_t rtParseCmdBuffers(Device *device);

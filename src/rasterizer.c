@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 #include "rasterizer.h"
 #include "dbg.h"
 #include "vertex_buffer.h"
@@ -200,6 +201,32 @@ int32_t rtDrawAuto(CmdBuffer *cmdbuff, uint32_t count) {
   return 0;
 
 error:
+  
+  return -1;
+}
+
+int32_t rtClearRenderTarget(CmdBuffer *cmdbuff, RenderTarget *target) {
+  CmdBufferInt *internal_cmdbuff = (CmdBufferInt *)cmdbuff;
+
+  /* Check that the cmd buffer has enough space for the new packet */
+  int32_t space_left = internal_cmdbuff->end - internal_cmdbuff->current;
+  check((sizeof(PacketClearRenderTarget) <= space_left),
+      "rtClearRenderTarget(): the cmdbuff doesn't have enough space \
+      left for the new command");
+
+  PacketClearRenderTarget *packet =
+    (PacketClearRenderTarget *)internal_cmdbuff->current;
+  packet->packet_header.header = PACK_TYPE_CLEARRENDERTARGET;
+  packet->target = (RenderTargetInt *)target;
+
+  internal_cmdbuff->current += sizeof(PacketClearRenderTarget);
+
+  debug("rtClearRenderTarget(): Set clear render target for target %p \
+      in cmdbuff %p", (void *)target, (void *)cmdbuff);
+  return 0;
+
+error:
+  
   return -1;
 }
 
@@ -401,6 +428,18 @@ int32_t rtParseCmdBuffers(Device *device) {
           packet_size = sizeof(PacketSetViewMat);
 
           internal_device->view_mat = *packet->mat;
+          break;
+        }
+        case PACK_TYPE_CLEARRENDERTARGET: {
+          PacketClearRenderTarget *packet =
+            (PacketClearRenderTarget *)read_ptr;
+          debug("Parsed clear render target packet, addr: %p", (void *)packet);
+
+          packet_size = sizeof(PacketClearRenderTarget);
+
+          /*Clear the render target to black transparent*/
+          memset(packet->target->location, 0, packet->target->size_bytes);
+          debug("Cleared render target %p", (void *)packet->target);
           break;
         }
       }

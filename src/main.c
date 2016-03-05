@@ -116,6 +116,7 @@ int32_t main() {
 
     kmMat4RotationZ(&model_mat, (kmPI / 10.f) * (float)(curr_ticks / 100U));
     rtSetModelMat(&cmdbuff, (const float *)&model_mat);
+    rtClearRenderTarget(&cmdbuff, &target);
     rtDrawAuto(&cmdbuff, num_vertices);
     rtSubmit(&device, &cmdbuff);
     rtParseCmdBuffers(&device);

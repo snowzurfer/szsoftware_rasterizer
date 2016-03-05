@@ -87,6 +87,11 @@ typedef struct PacketSetViewMat {
   kmMat4 *mat; 
 } PacketSetViewMat;
 #define PACK_TYPE_SETVIEWMAT 8U
+typedef struct PacketClearRenderTarget {
+  PacketHeader packet_header;
+  RenderTargetInt *target;
+} PacketClearRenderTarget;
+#define PACK_TYPE_CLEARRENDERTARGET 9U
 
 /* Function prototypes */
 int32_t cmdBufQueueInit(CmdBuffersQueue *cmdbuffer_queue);
