@@ -33,26 +33,26 @@ typedef enum CullModeValues {
 
 int32_t rtInitDevice(Device *device);
 
-int32_t rtClearDevice(Device *device);
+int32_t rtResetDevice(Device *device);
 
 int32_t rtInitCmdBuffer(CmdBuffer *cmdbuff, void *data, uint32_t size_bytes);
 
-int32_t rtClearCmdBuffer(CmdBuffer *cmdbuff);
+int32_t rtResetCmdBuffer(CmdBuffer *cmdbuff);
 
 int32_t rtInitVertexBuffer(VertexBuffer *vbuff, void *data, uint32_t size_data,
                            uint32_t size_element);
 
-int32_t rtClearVertexBuffer(VertexBuffer *vbuff);
+int32_t rtResetVertexBuffer(VertexBuffer *vbuff);
 
 /* Index buffer is made of uint32s */ 
 int32_t rtInitIndexBuffer(IndexBuffer *ibuff, uint32_t *data, uint32_t size_data);
 
-int32_t rtClearIndexBuffer(IndexBuffer *ibuff);
+int32_t rtResetIndexBuffer(IndexBuffer *ibuff);
 
 int32_t rtInitRenderTarget(RenderTarget *target, void *data, uint32_t width,
                            uint32_t height);
 
-int32_t rtClearRenderTarget(RenderTarget *target);
+int32_t rtResetRenderTarget(RenderTarget *target);
 
 int32_t rtSetRenderTarget(CmdBuffer *cmdbuff, RenderTarget *target);
 

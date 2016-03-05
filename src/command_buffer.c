@@ -22,8 +22,8 @@ error:
   return -1;
 }
 
-int32_t rtClearCmdBuffer(CmdBuffer *cmdbuff) {
-  check(cmdbuff != NULL, "rtClearCmdBuffer(): cmdbuff ptr passed is NULL");
+int32_t rtResetCmdBuffer(CmdBuffer *cmdbuff) {
+  check(cmdbuff != NULL, "rtResetCmdBuffer(): cmdbuff ptr passed is NULL");
 
   CmdBufferInt *internal_cmdbuff = (CmdBufferInt *)cmdbuff;
   
@@ -32,7 +32,7 @@ int32_t rtClearCmdBuffer(CmdBuffer *cmdbuff) {
   internal_cmdbuff->end = NULL;
   internal_cmdbuff->prev_buffer = NULL;
 
-  debug("rtClearCmdBuffer(): Cleared cmdbuff");
+  debug("rtResetCmdBuffer(): Reseted cmdbuff");
 
   return 0;
 
@@ -105,11 +105,11 @@ void cmdBufQueuePush(CmdBuffersQueue *queue, CmdBufferInt *cmdbuff) {
   debug("cmdBufQueuePush(): Pushed an item, addr: %p", (void *)cmdbuff);
 }
 
-void cmdBufQueueClear(CmdBuffersQueue *queue) {
+void cmdBufQueueReset(CmdBuffersQueue *queue) {
   while (queue->lenght) {
     CmdBufferInt *buffer_to_free = cmdBufQueuePop(queue);
     if (buffer_to_free != NULL) {
-      rtClearCmdBuffer((CmdBuffer *)buffer_to_free);
+      rtResetCmdBuffer((CmdBuffer *)buffer_to_free);
     }
   }
 
@@ -117,5 +117,5 @@ void cmdBufQueueClear(CmdBuffersQueue *queue) {
   queue->rear = NULL;
   queue->lenght = 0;
 
-  debug("cmdBufQueueClear(): cleared a queue");
+  debug("cmdBufQueueReset(): cleared a queue");
 }

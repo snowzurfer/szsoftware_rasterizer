@@ -30,7 +30,7 @@ static int32_t trisQueueInit(TrisQueue *queue, Triangle *tris_batch,
                              uint32_t lenght);
 static Triangle *trisQueuePop(TrisQueue *queue);
 static int32_t trisQueuePush(TrisQueue *queue, Triangle *tri);
-static void trisQueueClear(TrisQueue *queue);
+static void trisQueueReset(TrisQueue *queue);
 static uint32_t trisQueueGetSize(TrisQueue *queue);
 
 
@@ -496,7 +496,7 @@ int32_t rtPixelShading(DeviceInt *device, TrisQueue *tri_queue_in) {
     tri = trisQueuePop(tri_queue_in);
   }
 
-  trisQueueClear(tri_queue_in);
+  trisQueueReset(tri_queue_in);
 
   debug("rtPixelShading(): Completed");
   return 0;
@@ -520,7 +520,7 @@ error:
 
 Triangle *trisQueuePop(TrisQueue *queue) {
   if(queue->back >= queue->front) {
-    log_info("trisQueuePop(): the queue is empty!");
+    debug("trisQueuePop(): the queue is empty!");
     return NULL;
   }
 
@@ -533,7 +533,7 @@ Triangle *trisQueuePop(TrisQueue *queue) {
 
 int32_t trisQueuePush(TrisQueue *queue, Triangle *tri) {
   if(queue->front >= queue->end) {
-    log_info("trisQueuePush(): the queue is full!");
+    debug("trisQueuePush(): the queue is full!");
     return -1;
   }
 
@@ -544,7 +544,7 @@ int32_t trisQueuePush(TrisQueue *queue, Triangle *tri) {
   return 0;
 }
 
-void trisQueueClear(TrisQueue *queue) {
+void trisQueueReset(TrisQueue *queue) {
   free(queue->start);
 
   queue->front = NULL;
@@ -552,7 +552,7 @@ void trisQueueClear(TrisQueue *queue) {
   queue->end = NULL;
   queue->start = NULL;
 
-  debug("trisQueueClear(): cleared a queue");
+  debug("trisQueueReset(): cleared a queue");
 }
 
 uint32_t trisQueueGetSize(TrisQueue *queue) {

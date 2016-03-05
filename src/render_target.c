@@ -31,8 +31,8 @@ error:
   return -1;
 }
 
-int32_t rtClearRenderTarget(RenderTarget *target) {
-  check(target != NULL, "rtClearRenderTarget(): target ptr passed is NULL");
+int32_t rtResetRenderTarget(RenderTarget *target) {
+  check(target != NULL, "rtResetRenderTarget(): target ptr passed is NULL");
 
   RenderTargetInt *internal_target = (RenderTargetInt *)target;
   internal_target->location = NULL;
@@ -41,7 +41,7 @@ int32_t rtClearRenderTarget(RenderTarget *target) {
   internal_target->height = 0U;
   internal_target->pitch = 0U;
   
-  debug("rtClearRenderTarget(): Cleared target");
+  debug("rtResetRenderTarget(): Reseted target");
 
   return 0;
 

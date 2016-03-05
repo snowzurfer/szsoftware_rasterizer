@@ -30,13 +30,13 @@ error:
   return -1;
 }
 
-int32_t rtClearDevice(Device *device) {
-  check(device != NULL, "rtClearDevice(): device ptr passed is NULL");
+int32_t rtResetDevice(Device *device) {
+  check(device != NULL, "rtResetDevice(): device ptr passed is NULL");
 
   DeviceInt  *internal_device = (DeviceInt *)device;
   
-  /* Clear also the queue of cmdbuffers */
-  cmdBufQueueClear(&(internal_device->cmdbuffer_queue));
+  /* Reset also the queue of cmdbuffers */
+  cmdBufQueueReset(&(internal_device->cmdbuffer_queue));
 
   internal_device->state.values[STATE_WINDING] = RAST_WINDING_ORDER_CCW;
   internal_device->state.values[STATE_CULL_MODE] = RAST_CULL_MODE_BACK;
@@ -47,7 +47,7 @@ int32_t rtClearDevice(Device *device) {
   kmMat4Identity(&internal_device->projection_mat);
   kmMat4Identity(&internal_device->view_mat);
 
-  debug("rtClearDevice(): Cleared device");
+  debug("rtResetDevice(): Reseted device");
 
   return 0;
 

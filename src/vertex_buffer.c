@@ -38,15 +38,15 @@ error:
   return -1;
 }
 
-int32_t rtClearVertexBuffer(VertexBuffer *vbuff) {
-  check(vbuff != NULL, "rtClearVertexBuffer(): ptr passed is NULL");
+int32_t rtResetVertexBuffer(VertexBuffer *vbuff) {
+  check(vbuff != NULL, "rtResetVertexBuffer(): ptr passed is NULL");
 
   VertexBufferInt *internal_vbuff  = (VertexBufferInt *)vbuff;
 
   internal_vbuff->vert_num = 0U;
   internal_vbuff->data = NULL;
 
-  debug("rtClearVertexBuffer(): Cleared vertex buffer");
+  debug("rtResetVertexBuffer(): Reseted vertex buffer");
 
   return 0;
 

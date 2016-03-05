@@ -105,6 +105,7 @@ int32_t main() {
   while(run) {
     curr_ticks = SDL_GetTicks();
     delta_ticks = curr_ticks - last_ticks; 
+    debug("FPS: %f\n", 1000.f / (float)delta_ticks);
     
     /*Poll events*/
     while(SDL_PollEvent(&sdl_event) != 0) {
@@ -147,17 +148,17 @@ int32_t main() {
 
   /*fclose(of);*/
   
-  rtClearRenderTarget(&target);
+  rtResetRenderTarget(&target);
   free(target_data);
   free(indices);
   free(vertices);
-  rtClearIndexBuffer(&indbuff);
+  rtResetIndexBuffer(&indbuff);
   /*for (uint32_t i = 0U; i < 3U * num_vertices; i++) {*/
     /*vertices[i] = (float)i;*/
   /*}*/
-  rtClearVertexBuffer(&vtxbuff);
-  rtClearCmdBuffer(&cmdbuff);
-  rtClearDevice(&device);
+  rtResetVertexBuffer(&vtxbuff);
+  rtResetCmdBuffer(&cmdbuff);
+  rtResetDevice(&device);
 
   /*getc(stdin);*/
  

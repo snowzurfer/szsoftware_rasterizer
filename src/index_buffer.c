@@ -30,15 +30,15 @@ error:
   return -1;
 }
 
-int32_t rtClearIndexBuffer(IndexBuffer *ibuff) {
-  check(ibuff != NULL, "rtClearIndexBuffer(): ptr passed is NULL");
+int32_t rtResetIndexBuffer(IndexBuffer *ibuff) {
+  check(ibuff != NULL, "rtResetIndexBuffer(): ptr passed is NULL");
 
   IndexBufferInt *internal_ibuff  = (IndexBufferInt *)ibuff;
 
   internal_ibuff->indices_num = 0U;
   internal_ibuff->data = NULL;
 
-  debug("rtClearIndexBuffer(): Cleared index buffer");
+  debug("rtResetIndexBuffer(): Reseted index buffer");
 
   return 0;
 
